@@ -152,7 +152,7 @@ const Header = () => {
               <Plus className="h-4 w-4" />
               Publicar
             </Button>
-
+            
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" className="relative" aria-label="Abrir mensajes">
@@ -203,10 +203,12 @@ const Header = () => {
             <Button variant="ghost" size="sm">
               <Heart className="h-5 w-5" />
             </Button>
+            
 
             <Button variant="ghost" size="sm">
               <User className="h-5 w-5" />
             </Button>
+            
 
             <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="h-5 w-5" />
