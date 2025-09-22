@@ -201,14 +201,14 @@ const Header = () => {
             <Button variant="ghost" size="sm">
               <Heart className="h-5 w-5" />
             </Button>
-
+            
             <Button variant="ghost" size="sm" asChild>
               <Link to="/auth" className="flex items-center gap-2">
                 <User className="h-5 w-5" />
                 <span className="hidden sm:inline">Ingresar</span>
               </Link>
             </Button>
-
+            
             <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="h-5 w-5" />
             </Button>
@@ -219,6 +219,7 @@ const Header = () => {
         <div className="pb-4 md:hidden">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+
             <Input placeholder="Buscar productos o servicios..." className="pl-10 h-10" />
           </div>
         </div>
