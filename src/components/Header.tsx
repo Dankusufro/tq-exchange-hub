@@ -15,23 +15,22 @@ import {
   MessageCircle,
   Plus,
   Search,
-  User,
+  User
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { Link } from "react-router-dom";
 
 const notificationTypeIcons: Record<NotificationCategory, LucideIcon> = {
   trade: ArrowLeftRight,
   message: MessageCircle,
   system: Info,
-  alert: AlertTriangle,
+  alert: AlertTriangle
 };
 
 const notificationTypeColors: Record<NotificationCategory, string> = {
   trade: "text-emerald-500",
   message: "text-blue-500",
   system: "text-muted-foreground",
-  alert: "text-amber-500",
+  alert: "text-amber-500"
 };
 
 interface NotificationListProps {
@@ -51,7 +50,7 @@ const NotificationList = ({
   unreadCount,
   onMarkAllAsRead,
   onNotificationClick,
-  viewAllLabel = "Ver todas las notificaciones",
+  viewAllLabel = "Ver todas las notificaciones"
 }: NotificationListProps) => (
   <PopoverContent align="end" className="w-80 p-0 shadow-lg">
     <div className="flex items-center justify-between border-b px-4 py-3">
@@ -80,7 +79,7 @@ const NotificationList = ({
                 type="button"
                 className={cn(
                   "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:bg-muted/60",
-                  !notification.read && "bg-muted/40",
+                  !notification.read && "bg-muted/40"
                 )}
                 onClick={() => onNotificationClick(notification.id)}
               >
@@ -140,7 +139,10 @@ const Header = () => {
           <div className="hidden md:flex flex-1 max-w-md mx-8">
             <div className="relative w-full">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar productos o servicios..." className="pl-10 h-10" />
+              <Input
+                placeholder="Buscar productos o servicios..."
+                className="pl-10 h-10"
+              />
             </div>
           </div>
 
@@ -150,7 +152,7 @@ const Header = () => {
               <Plus className="h-4 w-4" />
               Publicar
             </Button>
-
+            
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" className="relative" aria-label="Abrir mensajes">
@@ -202,13 +204,12 @@ const Header = () => {
               <Heart className="h-5 w-5" />
             </Button>
             
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/auth" className="flex items-center gap-2">
-                <User className="h-5 w-5" />
-                <span className="hidden sm:inline">Ingresar</span>
-              </Link>
+
+            <Button variant="ghost" size="sm">
+              <User className="h-5 w-5" />
             </Button>
             
+
             <Button variant="ghost" size="sm" className="md:hidden">
               <Menu className="h-5 w-5" />
             </Button>
@@ -219,8 +220,10 @@ const Header = () => {
         <div className="pb-4 md:hidden">
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-
-            <Input placeholder="Buscar productos o servicios..." className="pl-10 h-10" />
+            <Input
+              placeholder="Buscar productos o servicios..."
+              className="pl-10 h-10"
+            />
           </div>
         </div>
       </div>
