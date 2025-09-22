@@ -1,15 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Search, 
-  Plus, 
-  MessageCircle, 
-  Bell, 
+import {
+  Search,
+  Plus,
+  MessageCircle,
+  Bell,
   User,
   Menu,
   Heart
 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Header = () => {
   return (
@@ -63,8 +64,11 @@ const Header = () => {
               <Heart className="h-5 w-5" />
             </Button>
             
-            <Button variant="ghost" size="sm">
-              <User className="h-5 w-5" />
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/auth" className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                <span className="hidden sm:inline">Ingresar</span>
+              </Link>
             </Button>
             
             <Button variant="ghost" size="sm" className="md:hidden">
