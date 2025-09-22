@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, Star } from "lucide-react";
+import MessageModal from "./MessageModal";
 
 interface ProductCardProps {
   id: string;
@@ -27,6 +29,7 @@ const ProductCard = ({
   userName,
   lookingFor 
 }: ProductCardProps) => {
+  const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   return (
     <Card className="group hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 bg-gradient-card border-border/50">
       <CardContent className="p-0">
@@ -90,15 +93,30 @@ const ProductCard = ({
           </div>
 
           <div className="flex gap-2 pt-2">
-            <Button className="flex-1 h-9">
+            <Button 
+              className="flex-1 h-9"
+              onClick={() => setIsMessageModalOpen(true)}
+            >
               Proponer intercambio
             </Button>
-            <Button variant="outline" size="sm" className="px-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="px-3"
+              onClick={() => setIsMessageModalOpen(true)}
+            >
               <MessageCircle className="h-4 w-4" />
             </Button>
           </div>
         </div>
       </CardContent>
+      
+      <MessageModal
+        isOpen={isMessageModalOpen}
+        onClose={() => setIsMessageModalOpen(false)}
+        productTitle={title}
+        userName={userName}
+      />
     </Card>
   );
 };
