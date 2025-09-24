@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
 
 const Auth = () => {
+  const navigate = useNavigate();
+
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({
     name: "",
@@ -32,6 +34,8 @@ const Auth = () => {
       title: "Sesión iniciada",
       description: "Bienvenido de nuevo a TruequePlus.",
     });
+
+    navigate("/");
   };
 
   const handleRegisterSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -59,6 +63,8 @@ const Auth = () => {
       title: "Registro exitoso",
       description: "Tu cuenta fue creada y puedes iniciar sesión cuando quieras.",
     });
+
+    navigate("/");
   };
 
   return (
