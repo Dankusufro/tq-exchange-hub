@@ -84,7 +84,7 @@ const Footer = () => {
             <div className="space-y-2 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
                 <MapPin className="h-3 w-3" />
-                <span>México, CDMX</span>
+                <span>Chile, Temuco</span>
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="h-3 w-3" />
@@ -103,9 +103,8 @@ const Footer = () => {
             © 2024 TruequePlus. Todos los derechos reservados.
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>Hecho con ❤️ en México</span>
-            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs">
-              Powered by Lovable
+            <span>Hecho con ❤️</span>
+            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs">Camila Cartes, Mario Laurie y Danko Torres
               <ExternalLink className="ml-1 h-3 w-3" />
             </Button>
           </div>
