@@ -5,6 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications, type Notification, type NotificationCategory } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -205,8 +206,10 @@ const Header = () => {
             </Button>
             
 
-            <Button variant="ghost" size="sm">
-              <User className="h-5 w-5" />
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/auth" aria-label="Iniciar sesión">
+                <User className="h-5 w-5" />
+              </Link>
             </Button>
             
 
