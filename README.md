@@ -64,6 +64,17 @@ This project is built with:
 
 Simply open [Lovable](https://lovable.dev/projects/211dc7bf-810c-4902-af07-4778c7a4955a) and click on Share -> Publish.
 
+### Deploying to GitHub Pages
+
+This repository is also configured to deploy automatically to GitHub Pages using GitHub Actions:
+
+1. Push your changes to the `main` branch.
+2. In your repository on GitHub, go to **Settings → Pages** and make sure the **Build and deployment** source is set to **GitHub Actions**.
+3. From the **Actions** tab, run the **Deploy to GitHub Pages** workflow once (or wait for the next push to `main`) so the first deployment activates the Pages site.
+4. Each subsequent push to `main` will build the project with `npm run build` and publish the contents of the `dist` folder to GitHub Pages.
+
+If you need to deploy manually, you can trigger the **Deploy to GitHub Pages** workflow from the **Actions** tab with the **Run workflow** button.
+
 ## Can I connect a custom domain to my Lovable project?
 
 Yes, you can!
