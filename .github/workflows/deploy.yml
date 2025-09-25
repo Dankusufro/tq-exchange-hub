@@ -1,0 +1,54 @@
+name: Deploy React app to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main        # o la rama principal que uses (master, develop, etc.)
+  workflow_dispatch: {} # permite lanzar manualmente desde Actions UI
+
+env:
+  NODE_VERSION: '18'        # ajusta si necesitas otra versión
+  PUBLISH_DIR: 'build'      # cambiar a 'dist' si usas Vite
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write       # necesario para que el action haga push a gh-pages
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Build app
+        run: |
+          npm run build
+
+      - name: Prepare 404 fallback for SPA (single page apps)
+        # copia index.html a 404.html para que GitHub Pages sirva la SPA en rutas deep-link
+        run: |
+          if [ -f "${{ env.PUBLISH_DIR }}/index.html" ]; then
+            cp "${{ env.PUBLISH_DIR }}/index.html" "${{ env.PUBLISH_DIR }}/404.html" || true
+          fi
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ env.PUBLISH_DIR }}
+          publish_branch: gh-pages
+          user_name: github-actions
+          user_email: actions@github.com
