@@ -3,6 +3,7 @@ import Hero from "@/components/Hero";
 import Categories from "@/components/Categories";
 import FeaturedProducts from "@/components/FeaturedProducts";
 import Footer from "@/components/Footer";
+import TradeRequests from "@/components/TradeRequests";
 
 const Index = () => {
   return (
@@ -12,6 +13,11 @@ const Index = () => {
         <Hero />
         <Categories />
         <FeaturedProducts />
+        <section className="py-16 bg-muted/40">
+          <div className="container mx-auto px-4">
+            <TradeRequests />
+          </div>
+        </section>
       </main>
       <Footer />
     </div>
