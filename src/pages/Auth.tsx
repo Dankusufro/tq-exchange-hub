@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,8 +18,10 @@ const Auth = () => {
     password: "",
     confirmPassword: "",
   });
+  const [isLoginLoading, setIsLoginLoading] = useState(false);
+  const [isRegisterLoading, setIsRegisterLoading] = useState(false);
 
-  const handleLoginSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!loginForm.email || !loginForm.password) {
@@ -30,15 +33,40 @@ const Auth = () => {
       return;
     }
 
-    toast({
-      title: "Sesión iniciada",
-      description: "Bienvenido de nuevo a TruequePlus.",
-    });
+    try {
+      setIsLoginLoading(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: loginForm.email,
+        password: loginForm.password,
+      });
 
-    navigate("/");
+      if (error) {
+        toast({
+          title: "No se pudo iniciar sesión",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Sesión iniciada",
+        description: "Bienvenido de nuevo a TruequePlus.",
+      });
+
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error inesperado",
+        description: error instanceof Error ? error.message : "Intenta nuevamente más tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoginLoading(false);
+    }
   };
 
-  const handleRegisterSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleRegisterSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
@@ -59,12 +87,47 @@ const Auth = () => {
       return;
     }
 
-    toast({
-      title: "Registro exitoso",
-      description: "Tu cuenta fue creada y puedes iniciar sesión cuando quieras.",
-    });
+    try {
+      setIsRegisterLoading(true);
+      const { data, error } = await supabase.auth.signUp({
+        email: registerForm.email,
+        password: registerForm.password,
+        options: {
+          data: {
+            full_name: registerForm.name,
+          },
+        },
+      });
 
-    navigate("/");
+      if (error) {
+        toast({
+          title: "No se pudo crear la cuenta",
+          description: error.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Registro exitoso",
+        description:
+          data.session
+            ? "Tu cuenta fue creada y ya puedes comenzar a intercambiar."
+            : "Revisa tu correo para confirmar tu cuenta y luego inicia sesión.",
+      });
+
+      if (data.session) {
+        navigate("/");
+      }
+    } catch (error) {
+      toast({
+        title: "Error inesperado",
+        description: error instanceof Error ? error.message : "Intenta nuevamente más tarde.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegisterLoading(false);
+    }
   };
 
   return (
@@ -106,7 +169,7 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isLoginLoading}>
                   Iniciar sesión
                 </Button>
               </form>
@@ -160,7 +223,7 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isRegisterLoading}>
                   Crear cuenta
                 </Button>
               </form>
