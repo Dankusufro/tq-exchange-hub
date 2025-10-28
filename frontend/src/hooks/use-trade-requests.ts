@@ -1,10 +1,36 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import type { Tables } from "@/integrations/supabase/types";
 
-export type TradeRequest = Tables<"trades">;
+import { apiClient } from "@/lib/api";
 
-type TradeRequestStatus = "accepted" | "rejected" | "pending";
+export type TradeRequestStatus = "accepted" | "rejected" | "pending";
+
+export type TradeRequest = {
+  id: string;
+  owner_id: string;
+  requester_id: string;
+  owner_item_id: string;
+  requester_item_id: string | null;
+  message: string | null;
+  status: TradeRequestStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+interface TradeDto {
+  id: string;
+  ownerId: string;
+  requesterId: string;
+  ownerItemId: string;
+  requesterItemId: string | null;
+  message: string | null;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface UseTradeRequestsOptions {
+  status?: TradeRequestStatus | TradeRequestStatus[];
+}
 
 interface UseTradeRequestsResult {
   requests: TradeRequest[];
@@ -15,7 +41,19 @@ interface UseTradeRequestsResult {
   refresh: () => Promise<void>;
 }
 
-const useTradeRequests = (options?: { status?: TradeRequestStatus | TradeRequestStatus[] }): UseTradeRequestsResult => {
+const normalizeTrade = (trade: TradeDto): TradeRequest => ({
+  id: trade.id,
+  owner_id: trade.ownerId,
+  requester_id: trade.requesterId,
+  owner_item_id: trade.ownerItemId,
+  requester_item_id: trade.requesterItemId,
+  message: trade.message,
+  status: trade.status.toLowerCase() as TradeRequestStatus,
+  created_at: trade.createdAt,
+  updated_at: trade.updatedAt,
+});
+
+const useTradeRequests = (options?: UseTradeRequestsOptions): UseTradeRequestsResult => {
   const [requests, setRequests] = useState<TradeRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,72 +64,60 @@ const useTradeRequests = (options?: { status?: TradeRequestStatus | TradeRequest
     setIsLoading(true);
     setError(null);
 
-    let query = supabase
-      .from("trades")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const query = new URLSearchParams();
 
-    if (statusFilter) {
-      if (Array.isArray(statusFilter)) {
-        query = query.in("status", statusFilter);
-      } else {
-        query = query.eq("status", statusFilter);
+      if (statusFilter && !Array.isArray(statusFilter)) {
+        query.set("status", statusFilter.toUpperCase());
       }
-    }
 
-    const { data, error } = await query;
+      const endpoint = `/api/trades${query.size > 0 ? `?${query.toString()}` : ""}`;
 
-    if (error) {
-      setError(error.message);
+      const response = await apiClient.get<TradeDto[]>(endpoint);
+      setRequests(response.map(normalizeTrade));
+    } catch (requestError) {
+      const message = requestError instanceof Error ? requestError.message : "No se pudo obtener las solicitudes";
+      setError(message);
       setRequests([]);
-    } else {
-      setRequests(data ?? []);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   }, [statusFilter]);
 
   useEffect(() => {
-    fetchRequests();
+    void fetchRequests();
   }, [fetchRequests]);
 
-  const updateStatus = useCallback(
-    async (id: string, status: TradeRequestStatus) => {
-      const { error } = await supabase
-        .from("trades")
-        .update({ status })
-        .eq("id", id);
+  const updateStatusLocally = useCallback((updatedRequest: TradeRequest) => {
+    setRequests((previous) =>
+      previous.map((request) => (request.id === updatedRequest.id ? updatedRequest : request)),
+    );
+  }, []);
 
-      if (error) {
-        throw new Error(error.message);
+  const acceptRequest = useCallback<UseTradeRequestsResult["acceptRequest"]>(
+    async (id) => {
+      try {
+        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/accept`);
+        updateStatusLocally(normalizeTrade(response));
+      } catch (requestError) {
+        const message = requestError instanceof Error ? requestError.message : "No se pudo aceptar la solicitud";
+        throw new Error(message);
       }
-
-      setRequests((previous) =>
-        previous.map((request) =>
-          request.id === id
-            ? {
-                ...request,
-                status,
-              }
-            : request,
-        ),
-      );
     },
-    [],
+    [updateStatusLocally],
   );
 
-  const acceptRequest = useCallback(
-    async (id: string) => {
-      await updateStatus(id, "accepted");
+  const rejectRequest = useCallback<UseTradeRequestsResult["rejectRequest"]>(
+    async (id) => {
+      try {
+        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/reject`);
+        updateStatusLocally(normalizeTrade(response));
+      } catch (requestError) {
+        const message = requestError instanceof Error ? requestError.message : "No se pudo rechazar la solicitud";
+        throw new Error(message);
+      }
     },
-    [updateStatus],
-  );
-
-  const rejectRequest = useCallback(
-    async (id: string) => {
-      await updateStatus(id, "rejected");
-    },
-    [updateStatus],
+    [updateStatusLocally],
   );
 
   return {
