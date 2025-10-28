@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ProfileRepository extends JpaRepository<Profile, UUID> {
     Optional<Profile> findByDisplayNameIgnoreCase(String displayName);
+
+    Optional<Profile> findByAccount_EmailIgnoreCase(String email);
 }

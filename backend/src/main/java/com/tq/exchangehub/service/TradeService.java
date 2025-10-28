@@ -11,15 +11,18 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TradeService {
 
     private final TradeRepository tradeRepository;
+    private final CurrentUserService currentUserService;
 
-    public TradeService(TradeRepository tradeRepository) {
+    public TradeService(TradeRepository tradeRepository, CurrentUserService currentUserService) {
         this.tradeRepository = tradeRepository;
+        this.currentUserService = currentUserService;
     }
 
     public List<TradeDto> listTrades(Optional<TradeStatus> status) {
@@ -41,6 +44,12 @@ public class TradeService {
                 tradeRepository
                         .findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Trade not found"));
+
+        UUID currentProfileId = currentUserService.getCurrentProfileId();
+        if (!trade.getOwner().getId().equals(currentProfileId)
+                && !trade.getRequester().getId().equals(currentProfileId)) {
+            throw new AccessDeniedException("You are not allowed to modify this trade");
+        }
 
         trade.setStatus(request.getStatus());
         trade.setUpdatedAt(OffsetDateTime.now());
