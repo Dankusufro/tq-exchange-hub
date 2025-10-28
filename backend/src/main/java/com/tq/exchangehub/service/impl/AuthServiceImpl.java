@@ -1,101 +1,103 @@
 package com.tq.exchangehub.service.impl;
 
-import java.security.Principal;
-
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.tq.exchangehub.dto.AuthResponse;
 import com.tq.exchangehub.dto.LoginRequest;
+import com.tq.exchangehub.dto.ProfileDto;
+import com.tq.exchangehub.dto.RefreshTokenRequest;
 import com.tq.exchangehub.dto.RegisterRequest;
-import com.tq.exchangehub.dto.SessionResponse;
-import com.tq.exchangehub.dto.UserDto;
-import com.tq.exchangehub.entity.AppUser;
-import com.tq.exchangehub.repository.AppUserRepository;
+import com.tq.exchangehub.entity.Profile;
+import com.tq.exchangehub.entity.UserAccount;
+import com.tq.exchangehub.repository.ProfileRepository;
+import com.tq.exchangehub.repository.UserAccountRepository;
 import com.tq.exchangehub.service.AuthService;
-import com.tq.exchangehub.config.JwtService;
+import com.tq.exchangehub.util.DtoMapper;
+import com.tq.exchangehub.util.JwtTokenProvider;
+import jakarta.transaction.Transactional;
+import java.time.OffsetDateTime;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 public class AuthServiceImpl implements AuthService {
 
-    private final AppUserRepository userRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final ProfileRepository profileRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+    private final JwtTokenProvider tokenProvider;
 
-    public AuthServiceImpl(AppUserRepository userRepository,
+    public AuthServiceImpl(
+            UserAccountRepository userAccountRepository,
+            ProfileRepository profileRepository,
             PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager,
-            JwtService jwtService) {
-        this.userRepository = userRepository;
+            JwtTokenProvider tokenProvider) {
+        this.userAccountRepository = userAccountRepository;
+        this.profileRepository = profileRepository;
         this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-        this.jwtService = jwtService;
+        this.tokenProvider = tokenProvider;
     }
 
     @Override
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        String normalizedEmail = request.email().trim().toLowerCase();
-        if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new IllegalArgumentException("Email is already registered");
-        }
+        userAccountRepository
+                .findByEmailIgnoreCase(request.getEmail())
+                .ifPresent(account -> {
+                    throw new IllegalArgumentException("Email already registered");
+                });
 
-        AppUser user = new AppUser();
-        user.setEmail(normalizedEmail);
-        user.setDisplayName(request.displayName().trim());
-        user.setPassword(passwordEncoder.encode(request.password()));
+        Profile profile = new Profile();
+        profile.setDisplayName(request.getDisplayName());
+        profile.setLocation(request.getLocation());
+        profile.setPhone(request.getPhone());
+        profile.setCreatedAt(OffsetDateTime.now());
+        profile.setUpdatedAt(OffsetDateTime.now());
+        Profile savedProfile = profileRepository.save(profile);
 
-        AppUser savedUser = userRepository.save(user);
-        String token = jwtService.generateToken(savedUser.getEmail());
+        UserAccount account = new UserAccount();
+        account.setEmail(request.getEmail().toLowerCase());
+        account.setPassword(passwordEncoder.encode(request.getPassword()));
+        account.setProfile(savedProfile);
+        account.setCreatedAt(OffsetDateTime.now());
+        userAccountRepository.save(account);
 
-        return new AuthResponse(token, toDto(savedUser));
+        ProfileDto profileDto = DtoMapper.toProfileDto(savedProfile);
+        String accessToken = tokenProvider.generateAccessToken(account);
+        String refreshToken = tokenProvider.generateRefreshToken(account);
+        return new AuthResponse(accessToken, refreshToken, profileDto);
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        String normalizedEmail = request.email().trim().toLowerCase();
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(normalizedEmail, request.password()));
+        UserAccount account =
+                userAccountRepository
+                        .findByEmailIgnoreCase(request.getEmail())
+                        .orElseThrow(() -> new IllegalArgumentException("Invalid credentials"));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtService.generateToken(normalizedEmail);
-        AppUser user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return new AuthResponse(token, toDto(user));
+        if (!passwordEncoder.matches(request.getPassword(), account.getPassword())) {
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+
+        ProfileDto profileDto = DtoMapper.toProfileDto(account.getProfile());
+        String accessToken = tokenProvider.generateAccessToken(account);
+        String refreshToken = tokenProvider.generateRefreshToken(account);
+        return new AuthResponse(accessToken, refreshToken, profileDto);
     }
 
     @Override
-    public SessionResponse getCurrentSession() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()
-                || "anonymousUser".equals(authentication.getPrincipal())) {
-            return new SessionResponse(null);
+    public AuthResponse refresh(RefreshTokenRequest request) {
+        if (!StringUtils.hasText(request.getRefreshToken())) {
+            throw new IllegalArgumentException("Refresh token must not be empty");
         }
 
-        String email = extractEmail(authentication.getPrincipal());
-        return userRepository.findByEmail(email)
-                .map(this::toDto)
-                .map(SessionResponse::new)
-                .orElse(new SessionResponse(null));
-    }
+        String email = tokenProvider.extractEmailFromRefreshToken(request.getRefreshToken());
+        UserAccount account =
+                userAccountRepository
+                        .findByEmailIgnoreCase(email)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-    private String extractEmail(Object principal) {
-        if (principal instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
-            return userDetails.getUsername();
-        }
-        if (principal instanceof Principal p) {
-            return p.getName();
-        }
-        return principal.toString();
-    }
-
-    private UserDto toDto(AppUser user) {
-        return new UserDto(user.getId(), user.getEmail(), user.getDisplayName());
+        String accessToken = tokenProvider.generateAccessToken(account);
+        String refreshToken = tokenProvider.generateRefreshToken(account);
+        return new AuthResponse(accessToken, refreshToken, DtoMapper.toProfileDto(account.getProfile()));
     }
 }
