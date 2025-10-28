@@ -1,8 +1,19 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const deriveApiBaseUrl = () => {
+  const envValue = import.meta.env.VITE_API_BASE_URL?.trim();
+  if (envValue) {
+    return envValue.replace(/\/$/, "");
+  }
 
-if (!API_BASE_URL) {
-  throw new Error("VITE_API_BASE_URL is not defined");
-}
+  if (typeof window !== "undefined") {
+    console.warn("VITE_API_BASE_URL is not defined; falling back to window origin.");
+    return window.location.origin;
+  }
+
+  console.warn("VITE_API_BASE_URL is not defined; falling back to http://localhost:8080.");
+  return "http://localhost:8080";
+};
+
+const API_BASE_URL = deriveApiBaseUrl();
 
 export type AuthTokens = {
   accessToken: string;
