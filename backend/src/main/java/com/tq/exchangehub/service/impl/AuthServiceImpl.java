@@ -5,6 +5,7 @@ import java.security.Principal;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -16,9 +17,10 @@ import com.tq.exchangehub.dto.RegisterRequest;
 import com.tq.exchangehub.dto.SessionResponse;
 import com.tq.exchangehub.dto.UserDto;
 import com.tq.exchangehub.entity.AppUser;
+import com.tq.exchangehub.config.JwtService;
+import com.tq.exchangehub.exception.InvalidCredentialsException;
 import com.tq.exchangehub.repository.AppUserRepository;
 import com.tq.exchangehub.service.AuthService;
-import com.tq.exchangehub.config.JwtService;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -60,14 +62,18 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
         String normalizedEmail = request.email().trim().toLowerCase();
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(normalizedEmail, request.password()));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, request.password()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String token = jwtService.generateToken(normalizedEmail);
-        AppUser user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        return new AuthResponse(token, toDto(user));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String token = jwtService.generateToken(normalizedEmail);
+            AppUser user = userRepository.findByEmail(normalizedEmail)
+                    .orElseThrow(() -> new IllegalArgumentException("User not found"));
+            return new AuthResponse(token, toDto(user));
+        } catch (AuthenticationException ex) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
     }
 
     @Override
