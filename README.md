@@ -1,84 +1,36 @@
-# Welcome to your Lovable project
+# TQ Exchange Hub Monorepo
 
-## Project info
+This repository now separates the frontend and backend implementations into dedicated folders so both stacks can live side by side.
 
-**URL**: https://lovable.dev/projects/211dc7bf-810c-4902-af07-4778c7a4955a
+## Project structure
 
-## How can I edit this code?
+```
+├── backend   # Spring Boot REST API
+└── frontend  # Vite + React client
+```
 
-There are several ways of editing your application.
+## Frontend (React + Vite)
 
-**Use Lovable**
+The original Lovable project now lives under [`frontend/`](frontend/). To start the development server:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/211dc7bf-810c-4902-af07-4778c7a4955a) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+cd frontend
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+All previous configuration files (Tailwind CSS, Supabase setup, etc.) remain unchanged inside this directory.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Backend (Spring Boot)
 
-**Use GitHub Codespaces**
+A brand new Spring Boot project is available inside [`backend/`](backend/). It exposes a sample health endpoint at `GET /api/health` that returns a simple status payload so you can verify the service is running.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Common Maven commands:
 
-## What technologies are used for this project?
+```bash
+cd backend
+mvn spring-boot:run        # Start the API locally
+mvn test                   # Run backend tests
+```
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/211dc7bf-810c-4902-af07-4778c7a4955a) and click on Share -> Publish.
-
-### Deploying to GitHub Pages
-
-This repository is also configured to deploy automatically to GitHub Pages using GitHub Actions:
-
-1. Push your changes to the `main` branch.
-2. In your repository on GitHub, go to **Settings → Pages** and make sure the **Build and deployment** source is set to **GitHub Actions**.
-3. Each push to `main` will build the project with `npm run build` and publish the contents of the `dist` folder to GitHub Pages.
-
-
-If you need to deploy manually, you can trigger the **Deploy to GitHub Pages** workflow from the **Actions** tab with the **Run workflow** button.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+The application listens on port `8080` by default (see `application.properties`). Feel free to expand this project with your domain logic and persistence needs.
