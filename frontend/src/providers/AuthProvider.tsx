@@ -110,39 +110,40 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     apiClient.setTokens(nextSession?.tokens ?? null);
   }, []);
 
-  const fetchSession = useCallback(async () => {
-    try {
-      const currentSession = await apiClient.get<AuthResponse>("/api/auth/session");
-      applySession(toAuthSession(currentSession));
-    } catch (error) {
-      console.error("Failed to fetch session", error);
-      applySession(null);
-    }
-  }, [applySession]);
-
   useEffect(() => {
     const storedSession = readStoredSession();
 
     if (storedSession) {
-      sessionRef.current = storedSession;
-      setSession(storedSession);
-      apiClient.setTokens(storedSession.tokens);
-    }
-
-    if (apiClient.getTokens()) {
-      void fetchSession();
+      applySession(storedSession);
+    } else if (apiClient.getTokens()) {
+      applySession(null);
     }
 
     const unsubscribe = apiClient.subscribe((updatedTokens) => {
       if (!updatedTokens) {
-        applySession(null);
+        sessionRef.current = null;
+        setSession(null);
+        persistSession(null);
         return;
       }
 
       const currentSession = sessionRef.current;
 
       if (!currentSession) {
-        void fetchSession();
+        const stored = readStoredSession();
+
+        if (!stored) {
+          return;
+        }
+
+        const restoredSession: AuthSession = {
+          ...stored,
+          tokens: updatedTokens,
+        };
+
+        sessionRef.current = restoredSession;
+        setSession(restoredSession);
+        persistSession(restoredSession);
         return;
       }
 
@@ -164,7 +165,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return unsubscribe;
-  }, [applySession, fetchSession]);
+  }, [applySession]);
 
   const signIn = useCallback<AuthContextValue["signIn"]>(
     async (credentials) => {
@@ -187,13 +188,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
 
   const signOut = useCallback<AuthContextValue["signOut"]>(async () => {
-    try {
-      await apiClient.post<void>("/api/auth/logout");
-    } catch (error) {
-      console.error("Failed to sign out", error);
-    } finally {
-      applySession(null);
-    }
+    applySession(null);
   }, [applySession]);
 
   const value = useMemo<AuthContextValue>(
