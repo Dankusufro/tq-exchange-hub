@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: tq_exchange_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-tqexchange}
+      POSTGRES_USER: ${POSTGRES_USER:-tqexchange}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tqexchange}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tqexchange} -d ${POSTGRES_DB:-tqexchange}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    image: maven:3.9-eclipse-temurin-17
+    container_name: tq_exchange_backend
+    working_dir: /app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-tqexchange}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-tqexchange}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-tqexchange}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: mvn spring-boot:run
+
+volumes:
+  postgres_data:
