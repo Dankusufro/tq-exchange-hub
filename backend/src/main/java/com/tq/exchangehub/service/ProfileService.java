@@ -7,15 +7,18 @@ import com.tq.exchangehub.repository.ProfileRepository;
 import com.tq.exchangehub.util.DtoMapper;
 import java.time.OffsetDateTime;
 import java.util.UUID;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProfileService {
 
     private final ProfileRepository profileRepository;
+    private final CurrentUserService currentUserService;
 
-    public ProfileService(ProfileRepository profileRepository) {
+    public ProfileService(ProfileRepository profileRepository, CurrentUserService currentUserService) {
         this.profileRepository = profileRepository;
+        this.currentUserService = currentUserService;
     }
 
     public ProfileDto getProfile(UUID id) {
@@ -31,6 +34,10 @@ public class ProfileService {
                 profileRepository
                         .findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
+
+        if (!profile.getId().equals(currentUserService.getCurrentProfileId())) {
+            throw new AccessDeniedException("Cannot update another user's profile");
+        }
 
         if (request.getDisplayName() != null) {
             profile.setDisplayName(request.getDisplayName());
