@@ -1,9 +1,11 @@
 package com.tq.exchangehub.controller;
 
 import com.tq.exchangehub.dto.AuthResponse;
+import com.tq.exchangehub.dto.ForgotPasswordRequest;
 import com.tq.exchangehub.dto.LoginRequest;
 import com.tq.exchangehub.dto.RefreshTokenRequest;
 import com.tq.exchangehub.dto.RegisterRequest;
+import com.tq.exchangehub.dto.ResetPasswordRequest;
 import com.tq.exchangehub.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -35,5 +37,17 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refresh(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request);
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.noContent().build();
     }
 }
