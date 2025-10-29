@@ -17,7 +17,7 @@ import { useNotifications, type Notification, type NotificationCategory } from "
 import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -29,6 +29,8 @@ import {
   Plus,
   Search,
   User,
+  Star,
+  TrendingUp,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -36,14 +38,14 @@ const notificationTypeIcons: Record<NotificationCategory, LucideIcon> = {
   trade: ArrowLeftRight,
   message: MessageCircle,
   system: Info,
-  alert: AlertTriangle
+  alert: AlertTriangle,
 };
 
 const notificationTypeColors: Record<NotificationCategory, string> = {
   trade: "text-emerald-500",
   message: "text-blue-500",
   system: "text-muted-foreground",
-  alert: "text-amber-500"
+  alert: "text-amber-500",
 };
 
 interface NotificationListProps {
@@ -138,12 +140,17 @@ const Header = () => {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
   const { favorites } = useFavorites();
+  const navigate = useNavigate();
 
   const messageNotifications = notifications.filter((notification) => notification.category === "message");
   const generalNotifications = notifications.filter((notification) => notification.category !== "message");
 
   const messageUnreadCount = messageNotifications.filter((notification) => !notification.read).length;
   const generalUnreadCount = generalNotifications.filter((notification) => !notification.read).length;
+  const ratingLabel =
+    user?.rating !== null && user?.rating !== undefined
+      ? user.rating.toFixed(1).replace(/\.0$/, "")
+      : null;
 
   const handleSignOut = async () => {
     try {
@@ -287,9 +294,33 @@ const Header = () => {
                   <DropdownMenuLabel className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">{user.displayName}</p>
                     <p className="text-xs text-muted-foreground">Gestiona tu perfil y tu sesión</p>
+                    {(user.totalTrades !== null || ratingLabel) && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-2">
+                        {user.totalTrades !== null && (
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            {user.totalTrades} trueques
+                          </span>
+                        )}
+                        {user.totalTrades !== null && ratingLabel && <span className="opacity-60">•</span>}
+                        {ratingLabel && (
+                          <span className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-amber-500" />
+                            {ratingLabel}/5
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled>Mi perfil (próximamente)</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      navigate("/profile");
+                    }}
+                  >
+                    Mi perfil
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(event) => {
