@@ -13,6 +13,7 @@ import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 public class JwtTokenProvider {
@@ -26,7 +27,19 @@ public class JwtTokenProvider {
 
     @PostConstruct
     void init() {
+        if (!StringUtils.hasText(properties.getSecret())) {
+            throw new IllegalStateException(
+                    "application.security.jwt.secret debe configurarse mediante la variable de entorno JWT_SECRET");
+        }
         this.key = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
+    }
+
+    public TokenPair generateTokenPair(UserAccount account) {
+        return new TokenPair(generateAccessToken(account), generateRefreshToken(account));
+    }
+
+    public TokenPair rotateTokens(UserAccount account) {
+        return generateTokenPair(account);
     }
 
     public String generateAccessToken(UserAccount account) {
@@ -35,6 +48,14 @@ public class JwtTokenProvider {
 
     public String generateRefreshToken(UserAccount account) {
         return buildToken(account.getEmail(), properties.getRefreshTokenExpiration(), "refresh");
+    }
+
+    public long getAccessTokenExpirationMillis() {
+        return properties.getAccessTokenExpiration();
+    }
+
+    public long getRefreshTokenExpirationMillis() {
+        return properties.getRefreshTokenExpiration();
     }
 
     private String buildToken(String email, long expirationMillis, String type) {
@@ -81,4 +102,6 @@ public class JwtTokenProvider {
             throw new IllegalArgumentException("Invalid token: " + ex.getMessage());
         }
     }
+
+    public record TokenPair(String accessToken, String refreshToken) {}
 }

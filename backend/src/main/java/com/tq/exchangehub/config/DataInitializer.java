@@ -8,6 +8,7 @@ import com.tq.exchangehub.entity.Review;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.entity.UserAccount;
+import com.tq.exchangehub.entity.Role;
 import com.tq.exchangehub.repository.CategoryRepository;
 import com.tq.exchangehub.repository.ItemRepository;
 import com.tq.exchangehub.repository.MessageRepository;
@@ -370,6 +371,11 @@ public class DataInitializer implements CommandLineRunner {
         account.setPassword(passwordEncoder.encode("Password123!"));
         account.setProfile(profile);
         account.setCreatedAt(createdAt);
+        if ("maria@example.com".equalsIgnoreCase(email)) {
+            account.setRole(Role.ADMIN);
+        } else {
+            account.setRole(Role.USER);
+        }
 
         userAccountRepository.save(account);
         profile.setAccount(account);
