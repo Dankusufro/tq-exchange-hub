@@ -7,7 +7,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "application.cors")
 public class CorsProperties {
 
-    private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:5173"));
+    private List<String> allowedOrigins =
+            new ArrayList<>(
+                    List.of(
+                            "http://localhost:5173",
+                            "http://localhost:5174",
+                            "http://localhost:4173",
+                            "http://localhost:4174"));
 
     private List<String> allowedMethods =
             new ArrayList<>(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
