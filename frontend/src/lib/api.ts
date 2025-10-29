@@ -27,6 +27,8 @@ type RequestOptions = {
   auth?: boolean;
 };
 
+export type ApiError = Error & { status?: number };
+
 type TokenListener = (tokens: AuthTokens | null) => void;
 
 const TOKEN_STORAGE_KEY = "exchangehub.tokens";
@@ -153,7 +155,9 @@ export class APIClient {
 
     if (!response.ok) {
       const errorMessage = await this.parseErrorMessage(response);
-      throw new Error(errorMessage);
+      const error = new Error(errorMessage) as ApiError;
+      error.status = response.status;
+      throw error;
     }
 
     if (response.status === 204) {

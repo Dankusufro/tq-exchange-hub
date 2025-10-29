@@ -5,10 +5,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from "@/providers/AuthProvider";
+
+type NotifiableError = Error & { status?: number; alreadyNotified?: boolean };
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
+  const { toast } = useToast();
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({
@@ -17,38 +22,45 @@ const Auth = () => {
     password: "",
     confirmPassword: "",
   });
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [registerLoading, setRegisterLoading] = useState(false);
 
-  const handleLoginSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!loginForm.email || !loginForm.password) {
-      toast({
-        title: "Datos incompletos",
-        description: "Ingresa tu correo y contraseña para continuar.",
-        variant: "destructive",
-      });
+  const showErrorToast = (title: string, description: string, error?: NotifiableError) => {
+    if (error?.alreadyNotified) {
       return;
     }
 
     toast({
-      title: "Sesión iniciada",
-      description: "Bienvenido de nuevo a TruequePlus.",
+      title,
+      description,
+      variant: "destructive",
     });
-
-    navigate("/");
   };
 
-  const handleRegisterSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleLoginSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoginLoading(true);
 
-    if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
+    try {
+      const session = await signIn({ ...loginForm });
       toast({
-        title: "Datos incompletos",
-        description: "Todos los campos son obligatorios para crear tu cuenta.",
-        variant: "destructive",
+        title: "Sesión iniciada",
+        description: `Bienvenido de nuevo, ${session.profile.displayName}!`,
       });
-      return;
+      navigate("/");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No pudimos iniciar sesión. Inténtalo nuevamente más tarde.";
+      showErrorToast("No pudimos iniciar sesión", message, error as NotifiableError);
+    } finally {
+      setLoginLoading(false);
     }
+  };
+
+  const handleRegisterSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
 
     if (registerForm.password !== registerForm.confirmPassword) {
       toast({
@@ -59,12 +71,28 @@ const Auth = () => {
       return;
     }
 
-    toast({
-      title: "Registro exitoso",
-      description: "Tu cuenta fue creada y puedes iniciar sesión cuando quieras.",
-    });
+    setRegisterLoading(true);
 
-    navigate("/");
+    try {
+      const session = await signUp({
+        email: registerForm.email,
+        password: registerForm.password,
+        displayName: registerForm.name,
+      });
+      toast({
+        title: "Registro exitoso",
+        description: `¡Hola ${session.profile.displayName}! Tu cuenta ya está lista para usarla en TruequePlus.`,
+      });
+      navigate("/");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No pudimos crear tu cuenta. Inténtalo nuevamente más tarde.";
+      showErrorToast("Registro fallido", message, error as NotifiableError);
+    } finally {
+      setRegisterLoading(false);
+    }
   };
 
   return (
@@ -106,7 +134,7 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={loginLoading}>
                   Iniciar sesión
                 </Button>
               </form>
@@ -160,7 +188,7 @@ const Auth = () => {
                     minLength={6}
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={registerLoading}>
                   Crear cuenta
                 </Button>
               </form>
