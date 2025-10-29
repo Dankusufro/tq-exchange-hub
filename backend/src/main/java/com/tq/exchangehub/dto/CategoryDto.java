@@ -10,6 +10,7 @@ public class CategoryDto {
     private String description;
     private String icon;
     private OffsetDateTime createdAt;
+    private long itemsCount;
 
     public UUID getId() {
         return id;
@@ -49,5 +50,13 @@ public class CategoryDto {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public long getItemsCount() {
+        return itemsCount;
+    }
+
+    public void setItemsCount(long itemsCount) {
+        this.itemsCount = itemsCount;
     }
 }

@@ -32,6 +32,7 @@ public class ItemRequest {
     private String location;
 
     private List<String> images;
+    private List<String> wishlist;
 
     public UUID getOwnerId() {
         return ownerId;
@@ -111,5 +112,13 @@ public class ItemRequest {
 
     public void setImages(List<String> images) {
         this.images = images;
+    }
+
+    public List<String> getWishlist() {
+        return wishlist;
+    }
+
+    public void setWishlist(List<String> wishlist) {
+        this.wishlist = wishlist;
     }
 }

@@ -20,6 +20,7 @@ public class ItemDto {
     private List<String> images;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
+    private List<String> wishlist;
 
     public UUID getId() {
         return id;
@@ -123,5 +124,13 @@ public class ItemDto {
 
     public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<String> getWishlist() {
+        return wishlist;
+    }
+
+    public void setWishlist(List<String> wishlist) {
+        this.wishlist = wishlist;
     }
 }
