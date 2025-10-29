@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { Check, Clock, X } from "lucide-react";
+import { Check, Clock, X, LogIn } from "lucide-react";
+
 import useTradeRequests from "@/hooks/use-trade-requests";
+import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +19,10 @@ const statusCopy: Record<string, string> = {
 };
 
 const TradeRequests = () => {
-  const { requests, isLoading, error, acceptRequest, rejectRequest } = useTradeRequests({ status: ["pending", "accepted", "rejected"] });
+  const { user } = useAuth();
+  const { requests, isLoading, isFetching, error, acceptRequest, rejectRequest } = useTradeRequests({
+    status: ["pending", "accepted", "rejected"],
+  });
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
   const sortedRequests = useMemo(
@@ -64,6 +70,25 @@ const TradeRequests = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Solicitudes de intercambio</CardTitle>
+          <CardDescription>Inicia sesión para gestionar tus solicitudes pendientes.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild className="gap-2">
+            <Link to="/auth">
+              <LogIn className="h-4 w-4" />
+              Iniciar sesión
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -110,7 +135,10 @@ const TradeRequests = () => {
     <Card className="shadow-card-hover border-border/50">
       <CardHeader>
         <CardTitle>Solicitudes de intercambio</CardTitle>
-        <CardDescription>Gestiona las propuestas que has recibido recientemente.</CardDescription>
+        <CardDescription>
+          Gestiona las propuestas que has recibido recientemente.
+          {isFetching && <span className="ml-2 text-xs text-muted-foreground">Actualizando...</span>}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {sortedRequests.map((request, index) => (
