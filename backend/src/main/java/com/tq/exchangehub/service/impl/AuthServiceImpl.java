@@ -22,6 +22,7 @@ import com.tq.exchangehub.util.JwtTokenProvider;
 import com.tq.exchangehub.util.JwtTokenProvider.TokenPair;
 import com.tq.exchangehub.util.PasswordStrengthValidator;
 import jakarta.transaction.Transactional;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -212,7 +213,8 @@ public class AuthServiceImpl implements AuthService {
         RefreshToken token = new RefreshToken();
         token.setToken(refreshToken);
         token.setUserAccount(account);
-        token.setExpiresAt(OffsetDateTime.now().plusMillis(tokenProvider.getRefreshTokenExpirationMillis()));
+        token.setExpiresAt(
+                OffsetDateTime.now().plus(Duration.ofMillis(tokenProvider.getRefreshTokenExpirationMillis())));
         refreshTokenRepository.save(token);
     }
 
@@ -222,7 +224,7 @@ public class AuthServiceImpl implements AuthService {
         PasswordResetToken resetToken = new PasswordResetToken();
         resetToken.setToken(UUID.randomUUID().toString());
         resetToken.setUserAccount(account);
-        resetToken.setExpiresAt(OffsetDateTime.now().plusMillis(passwordResetTokenExpiration));
+        resetToken.setExpiresAt(OffsetDateTime.now().plus(Duration.ofMillis(passwordResetTokenExpiration)));
         passwordResetTokenRepository.save(resetToken);
 
         SimpleMailMessage message = new SimpleMailMessage();
