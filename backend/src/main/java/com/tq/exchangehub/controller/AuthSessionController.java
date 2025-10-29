@@ -1,11 +1,9 @@
 package com.tq.exchangehub.controller;
 
 import com.tq.exchangehub.dto.AuthResponse;
-import com.tq.exchangehub.dto.ProfileDto;
 import com.tq.exchangehub.entity.UserAccount;
 import com.tq.exchangehub.security.UserPrincipal;
-import com.tq.exchangehub.util.DtoMapper;
-import com.tq.exchangehub.util.JwtTokenProvider;
+import com.tq.exchangehub.service.AuthService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,10 +16,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthSessionController {
 
-    private final JwtTokenProvider tokenProvider;
+    private final AuthService authService;
 
-    public AuthSessionController(JwtTokenProvider tokenProvider) {
-        this.tokenProvider = tokenProvider;
+    public AuthSessionController(AuthService authService) {
+        this.authService = authService;
     }
 
     @GetMapping("/session")
@@ -31,11 +29,8 @@ public class AuthSessionController {
         }
 
         UserAccount account = principal.getUserAccount();
-        ProfileDto profileDto = DtoMapper.toProfileDto(account.getProfile());
-        String accessToken = tokenProvider.generateAccessToken(account);
-        String refreshToken = tokenProvider.generateRefreshToken(account);
-
-        return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken, profileDto));
+        AuthResponse response = authService.createSession(account);
+        return ResponseEntity.ok(response);
     }
 
     /**
