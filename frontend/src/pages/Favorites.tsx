@@ -3,22 +3,34 @@ import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { useFavorites } from "@/hooks/use-favorites";
 import { Button } from "@/components/ui/button";
-import { HeartOff } from "lucide-react";
-import { Link } from "react-router-dom";
+import { ChevronLeft, HeartOff } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 
 const Favorites = () => {
   const { favorites, isLoading } = useFavorites();
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 bg-muted/30 py-12">
         <div className="container mx-auto px-4 space-y-8">
-          <div className="space-y-2 text-center">
-            <h1 className="text-3xl font-bold text-foreground">Mis favoritos</h1>
-            <p className="text-muted-foreground">
-              Guarda aquí los productos que más te interesan para revisarlos más tarde.
-            </p>
+          <div className="flex flex-col gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 w-fit"
+              onClick={() => navigate("/")}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" /> Volver
+            </Button>
+            <div className="space-y-2 text-center">
+              <h1 className="text-3xl font-bold text-foreground">Mis favoritos</h1>
+              <p className="text-muted-foreground">
+                Guarda aquí los productos que más te interesan para revisarlos más tarde.
+              </p>
+            </div>
           </div>
 
           {isLoading ? (
