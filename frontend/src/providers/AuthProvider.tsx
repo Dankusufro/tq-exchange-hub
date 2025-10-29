@@ -50,6 +50,7 @@ type RegisterCredentials = {
 type AuthContextValue = {
   user: Profile | null;
   session: AuthSession | null;
+  isLoading: boolean;
   signIn: (credentials: LoginCredentials) => Promise<AuthSession>;
   signUp: (credentials: RegisterCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
@@ -119,6 +120,7 @@ const persistSession = (session: AuthSession | null) => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const sessionRef = useRef<AuthSession | null>(null);
   const user = session?.profile ?? null;
   const { toast } = useToast();
@@ -152,17 +154,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [applySession, toast]);
 
   useEffect(() => {
-    const storedSession = readStoredSession();
+    let isMounted = true;
 
-    if (storedSession) {
-      sessionRef.current = storedSession;
-      setSession(storedSession);
-      apiClient.setTokens(storedSession.tokens);
-    }
+    const initialize = async () => {
+      const storedSession = readStoredSession();
 
-    if (apiClient.getTokens()) {
-      void fetchSession();
-    }
+      if (storedSession) {
+        sessionRef.current = storedSession;
+        setSession(storedSession);
+        apiClient.setTokens(storedSession.tokens);
+      }
+
+      if (apiClient.getTokens()) {
+        await fetchSession();
+      }
+
+      if (isMounted) {
+        setIsLoading(false);
+      }
+    };
+
+    void initialize();
 
     const unsubscribe = apiClient.subscribe((updatedTokens) => {
       if (!updatedTokens) {
@@ -194,7 +206,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       persistSession(nextSession);
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [applySession, fetchSession]);
 
   const signIn = useCallback<AuthContextValue["signIn"]>(
@@ -279,11 +294,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       user,
       session,
+      isLoading,
       signIn,
       signUp,
       signOut,
     }),
-    [session, signIn, signOut, signUp, user],
+    [isLoading, session, signIn, signOut, signUp, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

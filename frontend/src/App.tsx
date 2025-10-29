@@ -17,9 +17,13 @@ import { useAuth } from "./providers/AuthProvider";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: ReactElement }) => {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const location = useLocation();
   const from = `${location.pathname}${location.search}${location.hash}`;
+
+  if (isLoading) {
+    return null;
+  }
 
   if (!user) {
     return <Navigate to="/auth" replace state={{ from }} />;

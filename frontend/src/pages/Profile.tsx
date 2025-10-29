@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { CalendarDays, MapPin, Phone, Sparkles, Star, TrendingUp } from "lucide-react";
 
 const formatDate = (value: string | null) => {
@@ -60,6 +61,7 @@ type Profile = {
 
 const Profile = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const {
     data: profile,
@@ -68,8 +70,8 @@ const Profile = () => {
     refetch,
   } = useQuery<Profile>({
     queryKey: ["profile", user?.id],
-    queryFn: async () => apiClient.get<Profile>("/api/profile/me"),
-    enabled: Boolean(user),
+    queryFn: async () => apiClient.get<Profile>(`/api/profiles/${user?.id}`),
+    enabled: Boolean(user?.id),
     initialData: user ?? undefined,
   });
 
@@ -95,12 +97,21 @@ const Profile = () => {
                 información para inspirar confianza en la comunidad.
               </p>
             </div>
-            {isFetching && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="h-3 w-3 animate-ping rounded-full bg-primary" />
-                Sincronizando con el servidor...
-              </div>
-            )}
+            <div className="flex flex-col items-stretch gap-3 md:items-end">
+              <Button
+                variant="outline"
+                className="self-start md:self-end"
+                onClick={() => navigate(-1)}
+              >
+                Volver
+              </Button>
+              {isFetching && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="h-3 w-3 animate-ping rounded-full bg-primary" />
+                  Sincronizando con el servidor...
+                </div>
+              )}
+            </div>
           </div>
 
           {isError ? (
@@ -112,9 +123,14 @@ const Profile = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button variant="destructive" onClick={() => refetch()}>
-                  Reintentar
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="destructive" onClick={() => refetch()}>
+                    Reintentar
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate(-1)}>
+                    Volver
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
