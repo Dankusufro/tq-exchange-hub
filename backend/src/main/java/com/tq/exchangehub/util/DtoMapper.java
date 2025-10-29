@@ -2,6 +2,7 @@ package com.tq.exchangehub.util;
 
 import com.tq.exchangehub.dto.CategoryDto;
 import com.tq.exchangehub.dto.ItemDto;
+import com.tq.exchangehub.dto.ItemSummaryDto;
 import com.tq.exchangehub.dto.MessageDto;
 import com.tq.exchangehub.dto.ProfileDto;
 import com.tq.exchangehub.dto.ReviewDto;
@@ -46,18 +47,41 @@ public final class DtoMapper {
         dto.setService(item.getService());
         dto.setLocation(item.getLocation());
         dto.setImages(item.getImages());
+        dto.setWishlist(item.getWishlist());
         dto.setCreatedAt(item.getCreatedAt());
         dto.setUpdatedAt(item.getUpdatedAt());
         return dto;
     }
 
+    public static ItemSummaryDto toItemSummaryDto(Item item) {
+        ItemSummaryDto dto = new ItemSummaryDto();
+        dto.setId(item.getId());
+        dto.setTitle(item.getTitle());
+        dto.setDescription(item.getDescription());
+        dto.setCondition(item.getCondition());
+        dto.setLocation(item.getLocation());
+        dto.setCategoryName(item.getCategory().getName());
+        dto.setOwner(toProfileDto(item.getOwner()));
+        dto.setRating(item.getOwner().getRating());
+        dto.setWishlist(item.getWishlist());
+        dto.setMainImageUrl(item.getImages().isEmpty() ? null : item.getImages().get(0));
+        dto.setAvailable(item.getAvailable());
+        dto.setService(item.getService());
+        return dto;
+    }
+
     public static CategoryDto toCategoryDto(Category category) {
+        return toCategoryDto(category, 0L);
+    }
+
+    public static CategoryDto toCategoryDto(Category category, long itemsCount) {
         CategoryDto dto = new CategoryDto();
         dto.setId(category.getId());
         dto.setName(category.getName());
         dto.setDescription(category.getDescription());
         dto.setIcon(category.getIcon());
         dto.setCreatedAt(category.getCreatedAt());
+        dto.setItemsCount(itemsCount);
         return dto;
     }
 

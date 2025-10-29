@@ -1,5 +1,6 @@
 package com.tq.exchangehub.entity;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
@@ -53,9 +54,14 @@ public class Item {
     private String location;
 
     @ElementCollection
-    @jakarta.persistence.CollectionTable(name = "item_images", joinColumns = @JoinColumn(name = "item_id"))
+    @CollectionTable(name = "item_images", joinColumns = @JoinColumn(name = "item_id"))
     @Column(name = "image_url")
     private List<String> images = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "item_wishlist", joinColumns = @JoinColumn(name = "item_id"))
+    @Column(name = "wishlist_item")
+    private List<String> wishlist = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
@@ -149,6 +155,14 @@ public class Item {
 
     public void setImages(List<String> images) {
         this.images = images;
+    }
+
+    public List<String> getWishlist() {
+        return wishlist;
+    }
+
+    public void setWishlist(List<String> wishlist) {
+        this.wishlist = wishlist;
     }
 
     public OffsetDateTime getCreatedAt() {

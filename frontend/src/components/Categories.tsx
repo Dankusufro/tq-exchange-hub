@@ -1,28 +1,81 @@
-import { Button } from "@/components/ui/button";
-import { 
-  BookOpen, 
-  Shirt, 
-  Smartphone, 
-  Home, 
-  Car, 
-  Palette, 
-  Dumbbell, 
+import {
+  ArrowRight,
+  BookOpen,
+  Car,
+  Dumbbell,
+  Home,
+  Palette,
+  Shirt,
+  Smartphone,
+  Tag,
   Wrench,
-  ArrowRight 
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const categories = [
-  { name: "Libros y Educación", icon: BookOpen, count: "2,340" },
-  { name: "Ropa y Accesorios", icon: Shirt, count: "1,890" },
-  { name: "Electrónicos", icon: Smartphone, count: "1,567" },
-  { name: "Hogar y Jardín", icon: Home, count: "3,210" },
-  { name: "Vehículos", icon: Car, count: "890" },
-  { name: "Arte y Manualidades", icon: Palette, count: "1,234" },
-  { name: "Deportes", icon: Dumbbell, count: "987" },
-  { name: "Servicios", icon: Wrench, count: "2,100" },
-];
+import { Button } from "@/components/ui/button";
+import { useCategories } from "@/hooks/use-categories";
+
+const iconMap: Record<string, LucideIcon> = {
+  "lucide:book-open": BookOpen,
+  "lucide:shirt": Shirt,
+  "lucide:smartphone": Smartphone,
+  "lucide:home": Home,
+  "lucide:car": Car,
+  "lucide:palette": Palette,
+  "lucide:dumbbell": Dumbbell,
+  "lucide:wrench": Wrench,
+};
+
+const formatCount = (value: number) => new Intl.NumberFormat("es-MX").format(value);
 
 const Categories = () => {
+  const { data: categories, isLoading, isError, error } = useCategories();
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="col-span-full text-center text-muted-foreground py-10">
+          Cargando categorías...
+        </div>
+      );
+    }
+
+    if (isError) {
+      return (
+        <div className="col-span-full text-center text-destructive py-10">
+          {error instanceof Error ? error.message : "No se pudieron cargar las categorías."}
+        </div>
+      );
+    }
+
+    if (!categories || categories.length === 0) {
+      return (
+        <div className="col-span-full text-center text-muted-foreground py-10">
+          Aún no hay categorías disponibles.
+        </div>
+      );
+    }
+
+    return categories.map((category) => {
+      const Icon = category.icon ? iconMap[category.icon] ?? Tag : Tag;
+      return (
+        <Button
+          key={category.id}
+          variant="outline"
+          className="h-auto p-6 flex flex-col items-center gap-3 hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 bg-card"
+        >
+          <Icon className="h-8 w-8 text-primary" />
+          <div className="text-center">
+            <div className="font-semibold text-sm text-card-foreground">{category.name}</div>
+            <div className="text-xs text-muted-foreground">
+              {formatCount(category.itemsCount)} items
+            </div>
+          </div>
+        </Button>
+      );
+    });
+  };
+
   return (
     <section className="py-16 bg-accent/30">
       <div className="container mx-auto px-4">
@@ -35,28 +88,7 @@ const Categories = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {categories.map((category) => {
-            const Icon = category.icon;
-            return (
-              <Button
-                key={category.name}
-                variant="outline"
-                className="h-auto p-6 flex flex-col items-center gap-3 hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 bg-card"
-              >
-                <Icon className="h-8 w-8 text-primary" />
-                <div className="text-center">
-                  <div className="font-semibold text-sm text-card-foreground">
-                    {category.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {category.count} items
-                  </div>
-                </div>
-              </Button>
-            );
-          })}
-        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">{renderContent()}</div>
 
         <div className="text-center">
           <Button variant="outline" size="lg">

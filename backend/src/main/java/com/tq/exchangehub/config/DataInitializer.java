@@ -63,47 +63,77 @@ public class DataInitializer implements CommandLineRunner {
 
         OffsetDateTime now = OffsetDateTime.now();
 
+        Category books = new Category();
+        books.setName("Libros y Educación");
+        books.setDescription("Material académico y lecturas inspiradoras para estudiantes.");
+        books.setIcon("lucide:book-open");
+        books.setCreatedAt(now.minusDays(40));
+
+        Category clothing = new Category();
+        clothing.setName("Ropa y Accesorios");
+        clothing.setDescription("Prendas únicas y accesorios en excelente estado.");
+        clothing.setIcon("lucide:shirt");
+        clothing.setCreatedAt(now.minusDays(38));
+
         Category electronics = new Category();
-        electronics.setName("Electrónica");
-        electronics.setDescription("Dispositivos y gadgets en perfecto estado");
-        electronics.setIcon("lucide:cpu");
-        electronics.setCreatedAt(now.minusDays(30));
+        electronics.setName("Electrónicos");
+        electronics.setDescription("Dispositivos y gadgets listos para un nuevo hogar.");
+        electronics.setIcon("lucide:smartphone");
+        electronics.setCreatedAt(now.minusDays(36));
+
+        Category home = new Category();
+        home.setName("Hogar y Jardín");
+        home.setDescription("Decoración, muebles y plantas para renovar tus espacios.");
+        home.setIcon("lucide:home");
+        home.setCreatedAt(now.minusDays(34));
+
+        Category vehicles = new Category();
+        vehicles.setName("Vehículos");
+        vehicles.setDescription("Movilidad urbana y opciones sostenibles para transportarte.");
+        vehicles.setIcon("lucide:car");
+        vehicles.setCreatedAt(now.minusDays(32));
+
+        Category crafts = new Category();
+        crafts.setName("Arte y Manualidades");
+        crafts.setDescription("Creaciones hechas a mano y materiales creativos.");
+        crafts.setIcon("lucide:palette");
+        crafts.setCreatedAt(now.minusDays(30));
 
         Category sports = new Category();
         sports.setName("Deportes");
-        sports.setDescription("Equipamiento deportivo listo para usar");
+        sports.setDescription("Equipamiento y accesorios para mantenerte activo.");
         sports.setIcon("lucide:dumbbell");
         sports.setCreatedAt(now.minusDays(28));
 
         Category services = new Category();
         services.setName("Servicios");
-        services.setDescription("Talentos y habilidades para intercambiar");
-        services.setIcon("lucide:briefcase");
-        services.setCreatedAt(now.minusDays(27));
+        services.setDescription("Talentos y habilidades listos para ayudarte.");
+        services.setIcon("lucide:wrench");
+        services.setCreatedAt(now.minusDays(26));
 
-        categoryRepository.saveAll(List.of(electronics, sports, services));
+        categoryRepository.saveAll(List.of(books, clothing, electronics, home, vehicles, crafts, sports, services));
 
         Profile maria = new Profile();
         maria.setDisplayName("María López");
-        maria.setBio("Apasionada por la fotografía y el ciclismo.");
+        maria.setBio("Apasionada por la fotografía y los viajes en bici.");
         maria.setAvatarUrl("https://images.unsplash.com/photo-1524504388940-b1c1722653e1");
         maria.setLocation("Madrid, España");
         maria.setPhone("+34 600 123 456");
         maria.setRating(4.9);
-        maria.setTotalTrades(18);
+        maria.setTotalTrades(22);
         maria.setCreatedAt(now.minusMonths(6));
         maria.setUpdatedAt(now.minusDays(2));
 
         Profile luis = new Profile();
         luis.setDisplayName("Luis García");
-        luis.setBio("Coleccionista de tecnología vintage y entusiasta del bricolaje.");
+        luis.setBio("Coleccionista de tecnología vintage y lector empedernido.");
         luis.setAvatarUrl("https://images.unsplash.com/photo-1527980965255-d3b416303d12");
         luis.setLocation("Barcelona, España");
         luis.setPhone("+34 611 987 654");
         luis.setRating(4.7);
-        luis.setTotalTrades(12);
-        luis.setCreatedAt(now.minusMonths(4));
-        luis.setUpdatedAt(now.minusDays(3));
+        luis.setTotalTrades(15);
+        luis.setCreatedAt(now.minusMonths(5));
+        luis.setUpdatedAt(now.minusDays(4));
 
         Profile ana = new Profile();
         ana.setDisplayName("Ana Ruiz");
@@ -112,73 +142,201 @@ public class DataInitializer implements CommandLineRunner {
         ana.setLocation("Valencia, España");
         ana.setPhone("+34 622 456 789");
         ana.setRating(4.8);
-        ana.setTotalTrades(9);
-        ana.setCreatedAt(now.minusMonths(5));
+        ana.setTotalTrades(11);
+        ana.setCreatedAt(now.minusMonths(4));
         ana.setUpdatedAt(now.minusDays(5));
 
-        profileRepository.saveAll(List.of(maria, luis, ana));
+        Profile carlos = new Profile();
+        carlos.setDisplayName("Carlos Mendoza");
+        carlos.setBio("Amante del deporte y las aventuras al aire libre.");
+        carlos.setAvatarUrl("https://images.unsplash.com/photo-1544723795-3fb6469f5b39");
+        carlos.setLocation("Ciudad de México, México");
+        carlos.setPhone("+52 55 1234 5678");
+        carlos.setRating(4.8);
+        carlos.setTotalTrades(14);
+        carlos.setCreatedAt(now.minusMonths(7));
+        carlos.setUpdatedAt(now.minusDays(3));
+
+        Profile sofia = new Profile();
+        sofia.setDisplayName("Sofía Vega");
+        sofia.setBio("Instructora certificada de yoga y bienestar integral.");
+        sofia.setAvatarUrl("https://images.unsplash.com/photo-1524504388940-b1c1722653e1?ixid=sofia");
+        sofia.setLocation("Puebla, México");
+        sofia.setPhone("+52 22 9876 5432");
+        sofia.setRating(5.0);
+        sofia.setTotalTrades(19);
+        sofia.setCreatedAt(now.minusMonths(8));
+        sofia.setUpdatedAt(now.minusDays(1));
+
+        profileRepository.saveAll(List.of(maria, luis, ana, carlos, sofia));
 
         createAccountForProfile(maria, "maria@example.com", now.minusMonths(6));
-        createAccountForProfile(luis, "luis@example.com", now.minusMonths(4));
-        createAccountForProfile(ana, "ana@example.com", now.minusMonths(5));
+        createAccountForProfile(luis, "luis@example.com", now.minusMonths(5));
+        createAccountForProfile(ana, "ana@example.com", now.minusMonths(4));
+        createAccountForProfile(carlos, "carlos@example.com", now.minusMonths(7));
+        createAccountForProfile(sofia, "sofia@example.com", now.minusMonths(8));
 
-        Item camera = new Item();
-        camera.setOwner(maria);
-        camera.setCategory(electronics);
-        camera.setTitle("Cámara mirrorless Sony A6400");
-        camera.setDescription(
-                "Cámara en excelente estado con dos lentes y accesorios originales. Ideal para fotografía urbana.");
-        camera.setCondition("Excelente");
-        camera.setEstimatedValue(new BigDecimal("850.00"));
-        camera.setAvailable(true);
-        camera.setService(false);
-        camera.setLocation(maria.getLocation());
-        camera.setImages(List.of(
-                "https://images.unsplash.com/photo-1519183071298-a2962be90b8e",
-                "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f"));
-        camera.setCreatedAt(now.minusDays(14));
-        camera.setUpdatedAt(now.minusDays(3));
-
-        Item bike = new Item();
-        bike.setOwner(luis);
-        bike.setCategory(sports);
-        bike.setTitle("Bicicleta de montaña Orbea");
-        bike.setDescription(
-                "Bicicleta bien cuidada, usada en rutas ligeras. Incluye kit de reparación y casco.");
-        bike.setCondition("Muy buena");
-        bike.setEstimatedValue(new BigDecimal("650.00"));
-        bike.setAvailable(true);
-        bike.setService(false);
-        bike.setLocation(luis.getLocation());
-        bike.setImages(List.of(
+        Item mountainBike = new Item();
+        mountainBike.setOwner(carlos);
+        mountainBike.setCategory(sports);
+        mountainBike.setTitle("Bicicleta de montaña Trek");
+        mountainBike.setDescription(
+                "Suspensión ajustable y frenos de disco. Lista para rutas en la sierra.");
+        mountainBike.setCondition("Muy buena");
+        mountainBike.setEstimatedValue(new BigDecimal("680.00"));
+        mountainBike.setAvailable(true);
+        mountainBike.setService(false);
+        mountainBike.setLocation(carlos.getLocation());
+        mountainBike.setImages(List.of(
                 "https://images.unsplash.com/photo-1518655048521-f130df041f66",
                 "https://images.unsplash.com/photo-1509395176047-4a66953fd231"));
-        bike.setCreatedAt(now.minusDays(10));
-        bike.setUpdatedAt(now.minusDays(2));
+        mountainBike.setWishlist(List.of("Laptop", "Cámara fotográfica", "Guitarra eléctrica"));
+        mountainBike.setCreatedAt(now.minusDays(12));
+        mountainBike.setUpdatedAt(now.minusDays(2));
 
-        Item designConsultancy = new Item();
-        designConsultancy.setOwner(ana);
-        designConsultancy.setCategory(services);
-        designConsultancy.setTitle("Consultoría de diseño UX/UI");
-        designConsultancy.setDescription(
-                "Sesión de dos horas para revisar y mejorar la experiencia de usuario de tu producto digital.");
-        designConsultancy.setCondition("Servicio");
-        designConsultancy.setEstimatedValue(new BigDecimal("200.00"));
-        designConsultancy.setAvailable(true);
-        designConsultancy.setService(true);
-        designConsultancy.setLocation("Remoto");
-        designConsultancy.setImages(List.of("https://images.unsplash.com/photo-1553877522-43269d4ea984"));
-        designConsultancy.setCreatedAt(now.minusDays(7));
-        designConsultancy.setUpdatedAt(now.minusDays(1));
+        Item leatherJacket = new Item();
+        leatherJacket.setOwner(ana);
+        leatherJacket.setCategory(clothing);
+        leatherJacket.setTitle("Chaqueta de cuero vintage");
+        leatherJacket.setDescription(
+                "Piel auténtica, talla M. Conserva el forro original y cierres funcionales.");
+        leatherJacket.setCondition("Excelente");
+        leatherJacket.setEstimatedValue(new BigDecimal("320.00"));
+        leatherJacket.setAvailable(true);
+        leatherJacket.setService(false);
+        leatherJacket.setLocation(ana.getLocation());
+        leatherJacket.setImages(List.of(
+                "https://images.unsplash.com/photo-1542291026-7eec264c27ff",
+                "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab"));
+        leatherJacket.setWishlist(List.of("Botas de cuero", "Reloj clásico", "Perfume unisex"));
+        leatherJacket.setCreatedAt(now.minusDays(9));
+        leatherJacket.setUpdatedAt(now.minusDays(3));
 
-        itemRepository.saveAll(List.of(camera, bike, designConsultancy));
+        Item bookCollection = new Item();
+        bookCollection.setOwner(luis);
+        bookCollection.setCategory(books);
+        bookCollection.setTitle("Colección de libros universitarios");
+        bookCollection.setDescription(
+                "Textos de ingeniería y matemáticas. Incluye marcadores y notas destacadas.");
+        bookCollection.setCondition("Bueno");
+        bookCollection.setEstimatedValue(new BigDecimal("150.00"));
+        bookCollection.setAvailable(true);
+        bookCollection.setService(false);
+        bookCollection.setLocation(luis.getLocation());
+        bookCollection.setImages(List.of(
+                "https://images.unsplash.com/photo-1523475472560-d2df97ec485c",
+                "https://images.unsplash.com/photo-1521587760476-6c12a4b040da"));
+        bookCollection.setWishlist(List.of("Tablet", "Auriculares", "Mochila ergonómica"));
+        bookCollection.setCreatedAt(now.minusDays(11));
+        bookCollection.setUpdatedAt(now.minusDays(4));
+
+        Item yogaClasses = new Item();
+        yogaClasses.setOwner(sofia);
+        yogaClasses.setCategory(services);
+        yogaClasses.setTitle("Clases de yoga personalizadas");
+        yogaClasses.setDescription(
+                "Sesiones online y presenciales enfocadas en respiración y fuerza.");
+        yogaClasses.setCondition("Servicio");
+        yogaClasses.setEstimatedValue(new BigDecimal("180.00"));
+        yogaClasses.setAvailable(true);
+        yogaClasses.setService(true);
+        yogaClasses.setLocation("Puebla y modalidad virtual");
+        yogaClasses.setImages(List.of(
+                "https://images.unsplash.com/photo-1554306274-f23873d9a26f",
+                "https://images.unsplash.com/photo-1552196563-55cd4e45efb3"));
+        yogaClasses.setWishlist(List.of("Masajes terapéuticos", "Clases de cocina", "Consultas nutricionales"));
+        yogaClasses.setCreatedAt(now.minusDays(8));
+        yogaClasses.setUpdatedAt(now.minusDays(1));
+
+        Item iphone = new Item();
+        iphone.setOwner(maria);
+        iphone.setCategory(electronics);
+        iphone.setTitle("iPhone 12 Pro 128GB");
+        iphone.setDescription(
+                "Pantalla impecable, batería al 89%. Incluye cargador original y funda protectora.");
+        iphone.setCondition("Muy bueno");
+        iphone.setEstimatedValue(new BigDecimal("720.00"));
+        iphone.setAvailable(true);
+        iphone.setService(false);
+        iphone.setLocation(maria.getLocation());
+        iphone.setImages(List.of(
+                "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9",
+                "https://images.unsplash.com/photo-1512496015851-a90fb38ba796"));
+        iphone.setWishlist(List.of("Laptop ligera", "Consola portátil", "Bicicleta urbana"));
+        iphone.setCreatedAt(now.minusDays(6));
+        iphone.setUpdatedAt(now.minusDays(2));
+
+        Item indoorPlants = new Item();
+        indoorPlants.setOwner(ana);
+        indoorPlants.setCategory(home);
+        indoorPlants.setTitle("Conjunto de plantas de interior");
+        indoorPlants.setDescription(
+                "Incluye macetas de cerámica, guía de cuidados y fertilizante orgánico.");
+        indoorPlants.setCondition("Excelente");
+        indoorPlants.setEstimatedValue(new BigDecimal("95.00"));
+        indoorPlants.setAvailable(true);
+        indoorPlants.setService(false);
+        indoorPlants.setLocation(ana.getLocation());
+        indoorPlants.setImages(List.of(
+                "https://images.unsplash.com/photo-1483794344563-d27a8d18014e",
+                "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e"));
+        indoorPlants.setWishlist(List.of("Libros de botánica", "Herramientas de jardinería", "Decoración artesanal"));
+        indoorPlants.setCreatedAt(now.minusDays(5));
+        indoorPlants.setUpdatedAt(now.minusDays(1));
+
+        Item watercolorKit = new Item();
+        watercolorKit.setOwner(maria);
+        watercolorKit.setCategory(crafts);
+        watercolorKit.setTitle("Kit de acuarela profesional");
+        watercolorKit.setDescription(
+                "Incluye 24 colores, pinceles premium y papel de algodón prensado en frío.");
+        watercolorKit.setCondition("Nuevo");
+        watercolorKit.setEstimatedValue(new BigDecimal("120.00"));
+        watercolorKit.setAvailable(true);
+        watercolorKit.setService(false);
+        watercolorKit.setLocation(maria.getLocation());
+        watercolorKit.setImages(List.of(
+                "https://images.unsplash.com/photo-1526498460520-4c246339dccb",
+                "https://images.unsplash.com/photo-1513364776144-60967b0f800f"));
+        watercolorKit.setWishlist(List.of("Clases de cerámica", "Marco de madera", "Impresora fotográfica"));
+        watercolorKit.setCreatedAt(now.minusDays(4));
+        watercolorKit.setUpdatedAt(now.minusDays(1));
+
+        Item cityScooter = new Item();
+        cityScooter.setOwner(carlos);
+        cityScooter.setCategory(vehicles);
+        cityScooter.setTitle("Scooter eléctrico urbano");
+        cityScooter.setDescription(
+                "Autonomía de 25 km, plegable y ligero. Incluye cargador y bolsa de transporte.");
+        cityScooter.setCondition("Muy bueno");
+        cityScooter.setEstimatedValue(new BigDecimal("540.00"));
+        cityScooter.setAvailable(true);
+        cityScooter.setService(false);
+        cityScooter.setLocation(carlos.getLocation());
+        cityScooter.setImages(List.of(
+                "https://images.unsplash.com/photo-1519750157634-b6d493a0f77d",
+                "https://images.unsplash.com/photo-1502877338535-766e1452684a"));
+        cityScooter.setWishlist(List.of("Cámara deportiva", "Curso de fotografía", "Mochila impermeable"));
+        cityScooter.setCreatedAt(now.minusDays(3));
+        cityScooter.setUpdatedAt(now.minusHours(12));
+
+        itemRepository.saveAll(
+                List.of(
+                        mountainBike,
+                        leatherJacket,
+                        bookCollection,
+                        yogaClasses,
+                        iphone,
+                        indoorPlants,
+                        watercolorKit,
+                        cityScooter));
 
         Trade trade = new Trade();
         trade.setOwner(maria);
-        trade.setRequester(luis);
-        trade.setOwnerItem(camera);
-        trade.setRequesterItem(bike);
-        trade.setMessage("¿Te interesa intercambiar tu bicicleta por mi cámara? Podemos ajustar el trato.");
+        trade.setRequester(carlos);
+        trade.setOwnerItem(iphone);
+        trade.setRequesterItem(mountainBike);
+        trade.setMessage("¿Te interesa cambiar tu bicicleta por mi iPhone? Podemos ajustar accesorios.");
         trade.setStatus(TradeStatus.COMPLETED);
         trade.setCreatedAt(now.minusDays(5));
         trade.setUpdatedAt(now.minusDays(1));
@@ -187,23 +345,23 @@ public class DataInitializer implements CommandLineRunner {
 
         Message message = new Message();
         message.setTrade(trade);
-        message.setSender(luis);
-        message.setContent("Hola María, la cámara luce genial. ¿Aceptas un intercambio directo?");
+        message.setSender(carlos);
+        message.setContent("Hola María, el iPhone se ve impecable. ¿Incluyes la funda en el intercambio?");
         message.setCreatedAt(now.minusDays(5).plusHours(3));
         messageRepository.save(message);
 
         Review review = new Review();
         review.setTrade(trade);
-        review.setReviewer(luis);
+        review.setReviewer(carlos);
         review.setReviewed(maria);
         review.setRating(5);
-        review.setComment("Intercambio impecable, la cámara está como nueva.");
+        review.setComment("Intercambio impecable, el dispositivo llegó como se prometió.");
         review.setCreatedAt(now.minusDays(1));
         reviewRepository.save(review);
 
         maria.setTotalTrades(maria.getTotalTrades() + 1);
-        luis.setTotalTrades(luis.getTotalTrades() + 1);
-        profileRepository.saveAll(List.of(maria, luis));
+        carlos.setTotalTrades(carlos.getTotalTrades() + 1);
+        profileRepository.saveAll(List.of(maria, carlos));
     }
 
     private void createAccountForProfile(Profile profile, String email, OffsetDateTime createdAt) {

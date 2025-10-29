@@ -2,6 +2,7 @@ package com.tq.exchangehub.service;
 
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.ItemRequest;
+import com.tq.exchangehub.dto.ItemSummaryDto;
 import com.tq.exchangehub.entity.Category;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.Profile;
@@ -13,6 +14,10 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -76,10 +81,19 @@ public class ItemService {
         if (request.getImages() != null) {
             item.setImages(request.getImages());
         }
+        if (request.getWishlist() != null) {
+            item.setWishlist(request.getWishlist());
+        }
         item.setCreatedAt(OffsetDateTime.now());
         item.setUpdatedAt(OffsetDateTime.now());
 
         Item saved = itemRepository.save(item);
         return DtoMapper.toItemDto(saved);
+    }
+
+    public Page<ItemSummaryDto> findHighlighted(int page, int size) {
+        Pageable pageable =
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt"));
+        return itemRepository.findByAvailableTrueOrAvailableIsNull(pageable).map(DtoMapper::toItemSummaryDto);
     }
 }

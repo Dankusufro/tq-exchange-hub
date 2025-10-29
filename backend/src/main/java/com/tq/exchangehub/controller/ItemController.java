@@ -2,6 +2,7 @@ package com.tq.exchangehub.controller;
 
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.ItemRequest;
+import com.tq.exchangehub.dto.ItemSummaryDto;
 import com.tq.exchangehub.service.ItemService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -12,7 +13,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/items")
@@ -37,6 +40,12 @@ public class ItemController {
     @GetMapping("/owner/{ownerId}")
     public ResponseEntity<List<ItemDto>> findByOwner(@PathVariable UUID ownerId) {
         return ResponseEntity.ok(itemService.findByOwner(ownerId));
+    }
+
+    @GetMapping("/highlighted")
+    public ResponseEntity<Page<ItemSummaryDto>> findHighlighted(
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "6") int size) {
+        return ResponseEntity.ok(itemService.findHighlighted(page, size));
     }
 
     @PostMapping
