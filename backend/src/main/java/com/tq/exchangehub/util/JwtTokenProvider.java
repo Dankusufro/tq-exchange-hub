@@ -46,14 +46,6 @@ public class JwtTokenProvider {
         return generateTokenPair(account);
     }
 
-    public TokenPair generateTokenPair(UserAccount account) {
-        return new TokenPair(generateAccessToken(account), generateRefreshToken(account));
-    }
-
-    public TokenPair rotateTokens(UserAccount account) {
-        return generateTokenPair(account);
-    }
-
     public String generateAccessToken(UserAccount account) {
         return buildToken(account.getEmail(), properties.getAccessTokenExpiration(), "access");
     }
