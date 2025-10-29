@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNotifications, type Notification, type NotificationCategory } from "@/hooks/use-notifications";
+import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
@@ -136,6 +137,7 @@ const Header = () => {
   const { notifications, markAsRead, markNotificationsAsRead } = useNotifications();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { favorites } = useFavorites();
 
   const messageNotifications = notifications.filter((notification) => notification.category === "message");
   const generalNotifications = notifications.filter((notification) => notification.category !== "message");
@@ -250,8 +252,20 @@ const Header = () => {
               />
             </Popover>
 
-            <Button variant="ghost" size="sm">
-              <Heart className="h-5 w-5" />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="relative"
+              asChild
+            >
+              <Link to="/favorites" aria-label="Abrir favoritos">
+                <Heart className="h-5 w-5" />
+                {favorites.length > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                    {favorites.length}
+                  </Badge>
+                )}
+              </Link>
             </Button>
             
 
