@@ -9,7 +9,8 @@ import {
   type ReactNode,
 } from "react";
 
-import { apiClient, type AuthTokens } from "@/lib/api";
+import { useToast } from "@/components/ui/use-toast";
+import { apiClient, type ApiError, type AuthTokens } from "@/lib/api";
 
 type Profile = {
   id: string;
@@ -52,6 +53,24 @@ type AuthContextValue = {
   signIn: (credentials: LoginCredentials) => Promise<AuthSession>;
   signUp: (credentials: RegisterCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
+};
+
+type NotifiableApiError = ApiError & { alreadyNotified?: boolean };
+
+const isUnauthorizedError = (error: unknown): error is NotifiableApiError =>
+  typeof error === "object" && error !== null && (error as ApiError).status === 401;
+
+const toFriendlyError = (
+  message: string,
+  status?: number,
+  alreadyNotified = false,
+): NotifiableApiError => {
+  const error = new Error(message) as NotifiableApiError;
+  error.status = status;
+  if (alreadyNotified) {
+    error.alreadyNotified = true;
+  }
+  return error;
 };
 
 const SESSION_STORAGE_KEY = "exchangehub.session";
@@ -102,6 +121,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<AuthSession | null>(null);
   const sessionRef = useRef<AuthSession | null>(null);
   const user = session?.profile ?? null;
+  const { toast } = useToast();
 
   const applySession = useCallback((nextSession: AuthSession | null) => {
     sessionRef.current = nextSession;
@@ -115,10 +135,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const currentSession = await apiClient.get<AuthResponse>("/api/auth/session");
       applySession(toAuthSession(currentSession));
     } catch (error) {
+      if (isUnauthorizedError(error)) {
+        applySession(null);
+        toast({
+          title: "Tu sesión ha expirado",
+          description: "Por seguridad te pedimos iniciar sesión nuevamente.",
+          variant: "destructive",
+        });
+        error.alreadyNotified = true;
+        return;
+      }
+
       console.error("Failed to fetch session", error);
       applySession(null);
     }
-  }, [applySession]);
+  }, [applySession, toast]);
 
   useEffect(() => {
     const storedSession = readStoredSession();
@@ -168,22 +199,70 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = useCallback<AuthContextValue["signIn"]>(
     async (credentials) => {
-      const response = await apiClient.post<AuthResponse>("/api/auth/login", credentials, { auth: false });
-      const nextSession = toAuthSession(response);
-      applySession(nextSession);
-      return nextSession;
+      try {
+        const response = await apiClient.post<AuthResponse>("/api/auth/login", credentials, { auth: false });
+        const nextSession = toAuthSession(response);
+        applySession(nextSession);
+        return nextSession;
+      } catch (error) {
+        if (isUnauthorizedError(error)) {
+          applySession(null);
+          const message = "Credenciales inválidas. Verifica tu correo y contraseña.";
+          toast({
+            title: "No pudimos iniciar sesión",
+            description: message,
+            variant: "destructive",
+          });
+          throw toFriendlyError(message, error.status, true);
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No pudimos iniciar sesión. Inténtalo nuevamente más tarde.";
+        toast({
+          title: "No pudimos iniciar sesión",
+          description: message,
+          variant: "destructive",
+        });
+        throw toFriendlyError(message, (error as ApiError | undefined)?.status, true);
+      }
     },
-    [applySession],
+    [applySession, toast],
   );
 
   const signUp = useCallback<AuthContextValue["signUp"]>(
     async (credentials) => {
-      const response = await apiClient.post<AuthResponse>("/api/auth/register", credentials, { auth: false });
-      const nextSession = toAuthSession(response);
-      applySession(nextSession);
-      return nextSession;
+      try {
+        const response = await apiClient.post<AuthResponse>("/api/auth/register", credentials, { auth: false });
+        const nextSession = toAuthSession(response);
+        applySession(nextSession);
+        return nextSession;
+      } catch (error) {
+        if (isUnauthorizedError(error)) {
+          applySession(null);
+          const message = "No pudimos crear tu cuenta. Verifica los datos proporcionados.";
+          toast({
+            title: "Registro fallido",
+            description: message,
+            variant: "destructive",
+          });
+          throw toFriendlyError(message, error.status, true);
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No pudimos crear tu cuenta. Inténtalo nuevamente más tarde.";
+        toast({
+          title: "Registro fallido",
+          description: message,
+          variant: "destructive",
+        });
+        throw toFriendlyError(message, (error as ApiError | undefined)?.status, true);
+      }
     },
-    [applySession],
+    [applySession, toast],
   );
 
   const signOut = useCallback<AuthContextValue["signOut"]>(async () => {

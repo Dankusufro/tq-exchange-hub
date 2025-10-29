@@ -3,7 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/components/ui/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNotifications, type Notification, type NotificationCategory } from "@/hooks/use-notifications";
+import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import {
@@ -16,7 +27,7 @@ import {
   MessageCircle,
   Plus,
   Search,
-  User
+  User,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -112,14 +123,45 @@ const NotificationList = ({
   </PopoverContent>
 );
 
+const getInitials = (name: string | null | undefined) => {
+  if (!name) {
+    return "?";
+  }
+
+  const [first = "", second = ""] = name.split(" ");
+  return `${first.charAt(0)}${second.charAt(0)}`.toUpperCase();
+};
+
 const Header = () => {
   const { notifications, markAsRead, markNotificationsAsRead } = useNotifications();
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   const messageNotifications = notifications.filter((notification) => notification.category === "message");
   const generalNotifications = notifications.filter((notification) => notification.category !== "message");
 
   const messageUnreadCount = messageNotifications.filter((notification) => !notification.read).length;
   const generalUnreadCount = generalNotifications.filter((notification) => !notification.read).length;
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Sesión cerrada",
+        description: "Has cerrado sesión correctamente.",
+      });
+    } catch (error) {
+      const description =
+        error instanceof Error
+          ? error.message
+          : "No pudimos cerrar tu sesión. Inténtalo nuevamente más tarde.";
+      toast({
+        title: "Error al cerrar sesión",
+        description,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <header className="bg-card border-b sticky top-0 z-50 backdrop-blur-sm bg-card/95">
@@ -206,11 +248,46 @@ const Header = () => {
             </Button>
             
 
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/auth" aria-label="Iniciar sesión">
-                <User className="h-5 w-5" />
-              </Link>
-            </Button>
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="flex items-center gap-2" aria-label="Menú de usuario">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.avatarUrl ?? undefined} alt={user.displayName ?? "Usuario"} />
+                      <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                    </Avatar>
+                    <span className="hidden sm:flex flex-col text-left leading-tight">
+                      <span className="text-sm font-medium text-foreground">{user.displayName}</span>
+                      <span className="text-xs text-muted-foreground">Mi cuenta</span>
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{user.displayName}</p>
+                    <p className="text-xs text-muted-foreground">Gestiona tu perfil y tu sesión</p>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem disabled>Mi perfil (próximamente)</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(event) => {
+                      event.preventDefault();
+                      void handleSignOut();
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/auth" aria-label="Iniciar sesión">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
             
 
             <Button variant="ghost" size="sm" className="md:hidden">
