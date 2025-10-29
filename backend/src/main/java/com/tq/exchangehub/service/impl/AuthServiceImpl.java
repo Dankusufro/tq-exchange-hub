@@ -28,6 +28,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.MailException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
     private final JavaMailSender mailSender;
     private final PasswordStrengthValidator passwordStrengthValidator;
     private final long passwordResetTokenExpiration;
+    private final boolean mailSenderConfigured;
 
     public AuthServiceImpl(
             UserAccountRepository userAccountRepository,
@@ -70,6 +72,7 @@ public class AuthServiceImpl implements AuthService {
         this.mailSender = mailSender;
         this.passwordStrengthValidator = passwordStrengthValidator;
         this.passwordResetTokenExpiration = passwordResetTokenExpiration;
+        this.mailSenderConfigured = isMailSenderConfigured(mailSender);
     }
 
     @Override
@@ -233,10 +236,22 @@ public class AuthServiceImpl implements AuthService {
         message.setText("Hola,\n\nUtiliza el siguiente token para restablecer tu contraseña: "
                 + resetToken.getToken()
                 + "\n\nSi no solicitaste este cambio, ignora este correo.\n");
+        if (!mailSenderConfigured) {
+            log.info(
+                    "Se omitió el envío del correo de restablecimiento. Configure las propiedades spring.mail.* para habilitarlo.");
+            return;
+        }
         try {
             mailSender.send(message);
         } catch (MailException ex) {
             log.warn("No se pudo enviar el correo de restablecimiento de contraseña: {}", ex.getMessage());
         }
+    }
+
+    private boolean isMailSenderConfigured(JavaMailSender sender) {
+        if (sender instanceof JavaMailSenderImpl impl) {
+            return StringUtils.hasText(impl.getHost());
+        }
+        return true;
     }
 }

@@ -16,7 +16,8 @@ public class MailConfig {
     @Bean
     @ConditionalOnMissingBean(JavaMailSender.class)
     public JavaMailSender javaMailSenderFallback() {
-        log.warn("No se encontraron propiedades de correo. Se utilizará un JavaMailSender por defecto sin conexión configurada.");
+        log.warn(
+                "No se encontraron propiedades de correo. Se utilizará un JavaMailSender por defecto sin conexión configurada.");
         return new JavaMailSenderImpl();
     }
 }
