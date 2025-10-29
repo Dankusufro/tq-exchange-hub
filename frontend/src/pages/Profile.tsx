@@ -97,12 +97,21 @@ const Profile = () => {
                 información para inspirar confianza en la comunidad.
               </p>
             </div>
-            {isFetching && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="h-3 w-3 animate-ping rounded-full bg-primary" />
-                Sincronizando con el servidor...
-              </div>
-            )}
+            <div className="flex flex-col items-stretch gap-3 md:items-end">
+              <Button
+                variant="outline"
+                className="self-start md:self-end"
+                onClick={() => navigate(-1)}
+              >
+                Volver
+              </Button>
+              {isFetching && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className="h-3 w-3 animate-ping rounded-full bg-primary" />
+                  Sincronizando con el servidor...
+                </div>
+              )}
+            </div>
           </div>
 
           {isError ? (
