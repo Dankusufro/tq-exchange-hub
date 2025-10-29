@@ -12,6 +12,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -20,6 +22,7 @@ public class JwtTokenProvider {
 
     private final JwtProperties properties;
     private Key key;
+    private final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     public JwtTokenProvider(JwtProperties properties) {
         this.properties = properties;
@@ -27,11 +30,20 @@ public class JwtTokenProvider {
 
     @PostConstruct
     void init() {
-        if (!StringUtils.hasText(properties.getSecret())) {
-            throw new IllegalStateException(
-                    "application.security.jwt.secret debe configurarse mediante la variable de entorno JWT_SECRET");
+        if (StringUtils.hasText(properties.getSecret())) {
+            this.key = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
+        } else {
+            logger.warn("JWT_SECRET no está configurado; se generará una clave temporal para este proceso.");
+            this.key = Keys.secretKeyFor(SignatureAlgorithm.HS256);
         }
-        this.key = Keys.hmacShaKeyFor(properties.getSecret().getBytes(StandardCharsets.UTF_8));
+    }
+
+    public TokenPair generateTokenPair(UserAccount account) {
+        return new TokenPair(generateAccessToken(account), generateRefreshToken(account));
+    }
+
+    public TokenPair rotateTokens(UserAccount account) {
+        return generateTokenPair(account);
     }
 
     public TokenPair generateTokenPair(UserAccount account) {
