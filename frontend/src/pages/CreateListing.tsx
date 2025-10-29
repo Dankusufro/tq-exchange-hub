@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useCategories } from "@/hooks/use-categories";
 import { apiClient } from "@/lib/api";
 import { useAuth } from "@/providers/AuthProvider";
-import { AlertCircle, ChevronLeft, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 const conditionOptions = [
   { value: "new", label: "Nuevo" },
@@ -187,18 +187,7 @@ const CreateListing = () => {
     <div className="min-h-screen bg-muted/40 py-10">
       <div className="container max-w-3xl px-4">
         <Card>
-          <CardHeader className="space-y-4">
-            <div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="-ml-2"
-                onClick={() => navigate(-1)}
-              >
-                <ChevronLeft className="mr-1 h-4 w-4" /> Volver
-              </Button>
-            </div>
+          <CardHeader>
             <CardTitle>Crea una nueva publicación</CardTitle>
             <CardDescription>
               Comparte un producto o servicio para intercambiar con otros miembros de TruequePlus.
@@ -314,11 +303,10 @@ const CreateListing = () => {
                       <FormItem>
                         <FormLabel>Valor estimado</FormLabel>
                         <FormControl>
-                          <Input placeholder="Ej. 1500.00" inputMode="decimal" {...field} />
+                          <Input placeholder="Ej. 1500" inputMode="decimal" {...field} />
                         </FormControl>
                         <FormDescription>
-                          Ingresa un valor aproximado en tu moneda local para orientar a otros
-                          usuarios.
+                          Ingresa un valor aproximado en MXN para orientar a otros usuarios.
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
