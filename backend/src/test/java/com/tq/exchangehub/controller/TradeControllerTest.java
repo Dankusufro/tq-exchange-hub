@@ -1,21 +1,25 @@
 package com.tq.exchangehub.controller;
 
 import com.tq.exchangehub.dto.AuthResponse;
+import com.tq.exchangehub.dto.CreateTradeRequest;
 import com.tq.exchangehub.dto.RegisterRequest;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.entity.Category;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.Profile;
+import com.tq.exchangehub.entity.Message;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.repository.CategoryRepository;
 import com.tq.exchangehub.repository.ItemRepository;
+import com.tq.exchangehub.repository.MessageRepository;
 import com.tq.exchangehub.repository.ProfileRepository;
 import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.repository.UserAccountRepository;
 import java.math.BigDecimal;
-import java.util.UUID;
+import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +38,9 @@ class TradeControllerTest {
 
     @Autowired
     private TradeRepository tradeRepository;
+
+    @Autowired
+    private MessageRepository messageRepository;
 
     @Autowired
     private ItemRepository itemRepository;
@@ -56,6 +63,7 @@ class TradeControllerTest {
 
     @BeforeEach
     void setUp() {
+        messageRepository.deleteAll();
         tradeRepository.deleteAll();
         itemRepository.deleteAll();
         categoryRepository.deleteAll();
@@ -74,6 +82,7 @@ class TradeControllerTest {
 
     @AfterEach
     void cleanUp() {
+        messageRepository.deleteAll();
         tradeRepository.deleteAll();
         itemRepository.deleteAll();
         categoryRepository.deleteAll();
@@ -146,6 +155,56 @@ class TradeControllerTest {
                 .isForbidden();
     }
 
+    @Test
+    void createTradePersistsInitialMessage() {
+        Profile owner = findProfile(ownerAuth);
+        Profile requester = findProfile(requesterAuth);
+
+        Item ownerItem = createItem(owner, "Guitarra clásica");
+        Item requesterItem = createItem(requester, "Bajo eléctrico");
+
+        CreateTradeRequest request = new CreateTradeRequest();
+        request.setOwnerItemId(ownerItem.getId());
+        request.setRequesterItemId(requesterItem.getId());
+        request.setMessage("Hola, me interesa tu guitarra. Te ofrezco mi bajo eléctrico.");
+
+        TradeDto response =
+                webTestClient
+                        .post()
+                        .uri("/api/trades")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterAuth.getAccessToken())
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isOk()
+                        .expectBody(TradeDto.class)
+                        .returnResult()
+                        .getResponseBody();
+
+        org.assertj.core.api.Assertions.assertThat(response).isNotNull();
+
+        Trade trade =
+                tradeRepository
+                        .findById(Objects.requireNonNull(response).getId())
+                        .orElseThrow();
+
+        org.assertj.core.api.Assertions.assertThat(trade.getOwner().getId()).isEqualTo(owner.getId());
+        org.assertj.core.api.Assertions.assertThat(trade.getRequester().getId())
+                .isEqualTo(requester.getId());
+        org.assertj.core.api.Assertions.assertThat(trade.getMessage()).isEqualTo(request.getMessage());
+
+        List<Message> messages = messageRepository.findByTradeOrderByCreatedAtAsc(trade);
+        org.assertj.core.api.Assertions.assertThat(messages)
+                .hasSize(1)
+                .first()
+                .satisfies(message -> {
+                    org.assertj.core.api.Assertions.assertThat(message.getContent())
+                            .isEqualTo(request.getMessage());
+                    org.assertj.core.api.Assertions.assertThat(message.getSender().getId())
+                            .isEqualTo(requester.getId());
+                });
+    }
+
     private Trade createTrade(Profile owner, Profile requester, Item ownerItem, TradeStatus status) {
         Trade trade = new Trade();
         trade.setOwner(owner);
@@ -195,3 +254,53 @@ class TradeControllerTest {
         return Objects.requireNonNull(response);
     }
 }
+    @Test
+    void createTradePersistsInitialMessage() {
+        Profile owner = findProfile(ownerAuth);
+        Profile requester = findProfile(requesterAuth);
+
+        Item ownerItem = createItem(owner, "Guitarra clásica");
+        Item requesterItem = createItem(requester, "Bajo eléctrico");
+
+        CreateTradeRequest request = new CreateTradeRequest();
+        request.setOwnerItemId(ownerItem.getId());
+        request.setRequesterItemId(requesterItem.getId());
+        request.setMessage("Hola, me interesa tu guitarra. Te ofrezco mi bajo eléctrico.");
+
+        TradeDto response =
+                webTestClient
+                        .post()
+                        .uri("/api/trades")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterAuth.getAccessToken())
+                        .bodyValue(request)
+                        .exchange()
+                        .expectStatus()
+                        .isOk()
+                        .expectBody(TradeDto.class)
+                        .returnResult()
+                        .getResponseBody();
+
+        org.assertj.core.api.Assertions.assertThat(response).isNotNull();
+
+        Trade trade =
+                tradeRepository
+                        .findById(Objects.requireNonNull(response).getId())
+                        .orElseThrow();
+
+        org.assertj.core.api.Assertions.assertThat(trade.getOwner().getId()).isEqualTo(owner.getId());
+        org.assertj.core.api.Assertions.assertThat(trade.getRequester().getId())
+                .isEqualTo(requester.getId());
+        org.assertj.core.api.Assertions.assertThat(trade.getMessage()).isEqualTo(request.getMessage());
+
+        java.util.List<Message> messages = messageRepository.findByTradeOrderByCreatedAtAsc(trade);
+        org.assertj.core.api.Assertions.assertThat(messages)
+                .hasSize(1)
+                .first()
+                .satisfies(message -> {
+                    org.assertj.core.api.Assertions.assertThat(message.getContent())
+                            .isEqualTo(request.getMessage());
+                    org.assertj.core.api.Assertions.assertThat(message.getSender().getId())
+                            .isEqualTo(requester.getId());
+                });
+    }
+

@@ -9,9 +9,6 @@ public class MessageRequest {
     @NotNull
     private UUID tradeId;
 
-    @NotNull
-    private UUID senderId;
-
     @NotBlank
     private String content;
 
@@ -21,14 +18,6 @@ public class MessageRequest {
 
     public void setTradeId(UUID tradeId) {
         this.tradeId = tradeId;
-    }
-
-    public UUID getSenderId() {
-        return senderId;
-    }
-
-    public void setSenderId(UUID senderId) {
-        this.senderId = senderId;
     }
 
     public String getContent() {
