@@ -11,6 +11,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import CreateListing from "./pages/CreateListing";
 import Favorites from "./pages/Favorites";
+import Profile from "./pages/Profile";
 import { useAuth } from "./providers/AuthProvider";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <CreateListing />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />
