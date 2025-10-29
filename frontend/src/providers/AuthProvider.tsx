@@ -47,6 +47,16 @@ type RegisterCredentials = {
   displayName: string;
 };
 
+type PasswordResetRequest = {
+  email: string;
+};
+
+type ResetPasswordPayload = {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+};
+
 type AuthContextValue = {
   user: Profile | null;
   session: AuthSession | null;
@@ -54,6 +64,8 @@ type AuthContextValue = {
   signIn: (credentials: LoginCredentials) => Promise<AuthSession>;
   signUp: (credentials: RegisterCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
+  requestPasswordReset: (payload: PasswordResetRequest) => Promise<void>;
+  resetPassword: (payload: ResetPasswordPayload) => Promise<void>;
 };
 
 type NotifiableApiError = ApiError & { alreadyNotified?: boolean };
@@ -290,6 +302,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [applySession]);
 
+  const requestPasswordReset = useCallback<AuthContextValue["requestPasswordReset"]>(
+    async (payload) => {
+      try {
+        await apiClient.post<void>("/api/auth/forgot-password", payload, { auth: false });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No pudimos procesar la solicitud. Inténtalo de nuevo más tarde.";
+        throw toFriendlyError(message, (error as ApiError | undefined)?.status);
+      }
+    },
+    [],
+  );
+
+  const resetPassword = useCallback<AuthContextValue["resetPassword"]>(
+    async (payload) => {
+      try {
+        await apiClient.post<void>("/api/auth/reset-password", payload, { auth: false });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "No pudimos actualizar tu contraseña. Inténtalo de nuevo más tarde.";
+        throw toFriendlyError(message, (error as ApiError | undefined)?.status);
+      }
+    },
+    [],
+  );
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -298,8 +340,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signUp,
       signOut,
+      requestPasswordReset,
+      resetPassword,
     }),
-    [isLoading, session, signIn, signOut, signUp, user],
+    [
+      isLoading,
+      session,
+      signIn,
+      signOut,
+      signUp,
+      user,
+      requestPasswordReset,
+      resetPassword,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
