@@ -103,18 +103,28 @@ export class APIClient {
   }
 
   setTokens(tokens: AuthTokens | null) {
+    const nextAccessToken = tokens?.accessToken ?? null;
+    const nextRefreshToken = tokens?.refreshToken ?? null;
+    const tokensChanged =
+      nextAccessToken !== this.accessToken || nextRefreshToken !== this.refreshToken;
+
+    if (!tokensChanged) {
+      if (!tokens && typeof window !== "undefined") {
+        window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+      }
+      return;
+    }
+
+    this.accessToken = nextAccessToken;
+    this.refreshToken = nextRefreshToken;
+
     if (!tokens) {
-      this.accessToken = null;
-      this.refreshToken = null;
       if (typeof window !== "undefined") {
         window.localStorage.removeItem(TOKEN_STORAGE_KEY);
       }
       this.notifyListeners(null);
       return;
     }
-
-    this.accessToken = tokens.accessToken;
-    this.refreshToken = tokens.refreshToken;
 
     if (typeof window !== "undefined") {
       window.localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
