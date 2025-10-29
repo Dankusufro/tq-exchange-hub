@@ -5,8 +5,17 @@ const deriveApiBaseUrl = () => {
   }
 
   if (typeof window !== "undefined") {
+    const { origin, port } = window.location;
+
+    if (["5173", "5174", "4173", "4174"].includes(port)) {
+      console.warn(
+        "VITE_API_BASE_URL is not defined; assuming local backend at http://localhost:8080.",
+      );
+      return "http://localhost:8080";
+    }
+
     console.warn("VITE_API_BASE_URL is not defined; falling back to window origin.");
-    return window.location.origin;
+    return origin;
   }
 
   console.warn("VITE_API_BASE_URL is not defined; falling back to http://localhost:8080.");
