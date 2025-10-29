@@ -4,7 +4,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "msw": ["./src/test/msw"],
+      "msw/node": ["./src/test/msw-node"]
     },
     "noImplicitAny": false,
     "noUnusedParameters": false,

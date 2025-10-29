@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
-import { apiClient } from "@/lib/api";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
+import { apiClient, type ApiError } from "@/lib/api";
+import { useAuth } from "@/providers/AuthProvider";
 
 export type TradeRequestStatus = "accepted" | "rejected" | "pending";
 
@@ -35,6 +38,7 @@ interface UseTradeRequestsOptions {
 interface UseTradeRequestsResult {
   requests: TradeRequest[];
   isLoading: boolean;
+  isFetching: boolean;
   error: string | null;
   acceptRequest: (id: string) => Promise<void>;
   rejectRequest: (id: string) => Promise<void>;
@@ -53,80 +57,147 @@ const normalizeTrade = (trade: TradeDto): TradeRequest => ({
   updated_at: trade.updatedAt,
 });
 
+const isUnauthorizedError = (error: unknown): error is ApiError =>
+  typeof error === "object" && error !== null && (error as ApiError).status === 401;
+
 const useTradeRequests = (options?: UseTradeRequestsOptions): UseTradeRequestsResult => {
-  const [requests, setRequests] = useState<TradeRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { session, signOut } = useAuth();
+  const queryClient = useQueryClient();
 
-  const statusFilter = useMemo(() => options?.status, [options?.status]);
+  const normalizedStatuses = useMemo(() => {
+    if (!options?.status) {
+      return undefined;
+    }
 
-  const fetchRequests = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+    const rawStatuses = Array.isArray(options.status) ? options.status : [options.status];
+    const uniqueStatuses = Array.from(new Set(rawStatuses));
 
+    return uniqueStatuses.map((status) => status.toUpperCase());
+  }, [options?.status]);
+
+  const queryKey = useMemo(
+    () => ["tradeRequests", session?.profile.id ?? null, normalizedStatuses ?? []] as const,
+    [normalizedStatuses, session?.profile.id],
+  );
+
+  const handleRequestError = useCallback(
+    async (error: unknown, fallbackMessage: string): Promise<never> => {
+      if (isUnauthorizedError(error)) {
+        await signOut();
+      }
+
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      throw new Error(fallbackMessage);
+    },
+    [signOut],
+  );
+
+  const fetchTrades = useCallback(async () => {
     try {
       const query = new URLSearchParams();
 
-      if (statusFilter && !Array.isArray(statusFilter)) {
-        query.set("status", statusFilter.toUpperCase());
-      }
+      normalizedStatuses?.forEach((status) => {
+        query.append("status", status);
+      });
 
       const endpoint = `/api/trades${query.size > 0 ? `?${query.toString()}` : ""}`;
-
       const response = await apiClient.get<TradeDto[]>(endpoint);
-      setRequests(response.map(normalizeTrade));
-    } catch (requestError) {
-      const message = requestError instanceof Error ? requestError.message : "No se pudo obtener las solicitudes";
-      setError(message);
-      setRequests([]);
-    } finally {
-      setIsLoading(false);
+      return response.map(normalizeTrade);
+    } catch (error) {
+      await handleRequestError(error, "No se pudo obtener las solicitudes");
     }
-  }, [statusFilter]);
+  }, [handleRequestError, normalizedStatuses]);
 
-  useEffect(() => {
-    void fetchRequests();
-  }, [fetchRequests]);
+  const tradesQuery = useQuery<TradeRequest[], Error>({
+    queryKey,
+    queryFn: fetchTrades,
+    enabled: Boolean(session),
+  });
 
-  const updateStatusLocally = useCallback((updatedRequest: TradeRequest) => {
-    setRequests((previous) =>
-      previous.map((request) => (request.id === updatedRequest.id ? updatedRequest : request)),
-    );
-  }, []);
+  const updateCachedTrade = useCallback(
+    (updatedTrade: TradeRequest) => {
+      queryClient.setQueryData<TradeRequest[] | undefined>(queryKey, (previous = []) =>
+        previous.map((trade) => (trade.id === updatedTrade.id ? updatedTrade : trade)),
+      );
+    },
+    [queryClient, queryKey],
+  );
+
+  const acceptMutation = useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/accept`);
+        return normalizeTrade(response);
+      } catch (error) {
+        await handleRequestError(error, "No se pudo aceptar la solicitud");
+      }
+    },
+    onSuccess: (updatedTrade) => {
+      if (updatedTrade) {
+        updateCachedTrade(updatedTrade);
+      }
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/reject`);
+        return normalizeTrade(response);
+      } catch (error) {
+        await handleRequestError(error, "No se pudo rechazar la solicitud");
+      }
+    },
+    onSuccess: (updatedTrade) => {
+      if (updatedTrade) {
+        updateCachedTrade(updatedTrade);
+      }
+    },
+  });
 
   const acceptRequest = useCallback<UseTradeRequestsResult["acceptRequest"]>(
     async (id) => {
       try {
-        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/accept`);
-        updateStatusLocally(normalizeTrade(response));
-      } catch (requestError) {
-        const message = requestError instanceof Error ? requestError.message : "No se pudo aceptar la solicitud";
-        throw new Error(message);
+        await acceptMutation.mutateAsync(id);
+      } catch (error) {
+        throw error instanceof Error ? error : new Error("No se pudo aceptar la solicitud");
       }
     },
-    [updateStatusLocally],
+    [acceptMutation],
   );
 
   const rejectRequest = useCallback<UseTradeRequestsResult["rejectRequest"]>(
     async (id) => {
       try {
-        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/reject`);
-        updateStatusLocally(normalizeTrade(response));
-      } catch (requestError) {
-        const message = requestError instanceof Error ? requestError.message : "No se pudo rechazar la solicitud";
-        throw new Error(message);
+        await rejectMutation.mutateAsync(id);
+      } catch (error) {
+        throw error instanceof Error ? error : new Error("No se pudo rechazar la solicitud");
       }
     },
-    [updateStatusLocally],
+    [rejectMutation],
   );
 
+  const refresh = useCallback(async () => {
+    if (!session) {
+      return;
+    }
+
+    await tradesQuery.refetch();
+  }, [session, tradesQuery]);
+
+  const hasSession = Boolean(session);
+
   return {
-    requests,
-    isLoading,
-    error,
+    requests: hasSession ? tradesQuery.data ?? [] : [],
+    isLoading: hasSession && (tradesQuery.isLoading || tradesQuery.isPending),
+    isFetching: hasSession && tradesQuery.isFetching,
+    error: hasSession ? tradesQuery.error?.message ?? null : null,
     acceptRequest,
     rejectRequest,
-    refresh: fetchRequests,
+    refresh,
   };
 };
 

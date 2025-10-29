@@ -14,6 +14,8 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      msw: path.resolve(__dirname, "./src/test/msw"),
+      "msw/node": path.resolve(__dirname, "./src/test/msw-node"),
     },
   },
   test: {
