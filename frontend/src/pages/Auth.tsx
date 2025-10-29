@@ -12,7 +12,8 @@ type NotifiableError = Error & { status?: number; alreadyNotified?: boolean };
 
 const Auth = () => {
   const navigate = useNavigate();
-  const location = useLocation<{ from?: string }>();
+  // @ts-ignore
+    const location = useLocation<{ from?: string }>();
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
 
