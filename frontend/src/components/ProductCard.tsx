@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Heart, MessageCircle, Star } from "lucide-react";
 import MessageModal from "./MessageModal";
+import { useFavorites, type FavoriteItem } from "@/hooks/use-favorites";
+import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -33,6 +36,35 @@ const ProductCard = ({
   lookingFor 
 }: ProductCardProps) => {
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { toast } = useToast();
+
+  const handleToggleFavorite = useCallback(async () => {
+    const favoriteItem: FavoriteItem = {
+      id,
+      ownerId,
+      title,
+      description,
+      image,
+      category,
+      condition,
+      location,
+      userRating,
+      userName,
+      lookingFor
+    };
+
+    const added = await toggleFavorite(favoriteItem);
+
+    toast({
+      title: added ? "Añadido a favoritos" : "Eliminado de favoritos",
+      description: added
+        ? "Podrás consultar este producto desde tu lista de favoritos."
+        : "Ya no verás este producto en tu lista de favoritos.",
+    });
+  }, [toggleFavorite, id, ownerId, title, description, image, category, condition, location, userRating, userName, lookingFor, toast]);
+
+  const favorite = isFavorite(id);
   return (
     <Card className="group hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 bg-gradient-card border-border/50">
       <CardContent className="p-0">
@@ -47,12 +79,18 @@ const ProductCard = ({
               {category}
             </Badge>
           </div>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
-            className="absolute top-3 right-3 bg-white/90 hover:bg-white text-foreground"
+            className={cn(
+              "absolute top-3 right-3 bg-white/90 text-foreground transition-colors",
+              favorite && "text-rose-500 hover:text-rose-500"
+            )}
+            aria-label={favorite ? "Eliminar de favoritos" : "Añadir a favoritos"}
+            aria-pressed={favorite}
+            onClick={handleToggleFavorite}
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={cn("h-4 w-4", favorite && "fill-current")} />
           </Button>
         </div>
         
