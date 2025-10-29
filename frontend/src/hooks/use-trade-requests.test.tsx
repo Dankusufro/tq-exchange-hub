@@ -35,12 +35,14 @@ const signOutMock = vi.fn<[], Promise<void>>();
 const authState: {
   user: Profile | null;
   session: Session | null;
+  isHydrated: boolean;
   signOut: typeof signOutMock;
   signIn: ReturnType<typeof vi.fn>;
   signUp: ReturnType<typeof vi.fn>;
 } = {
   user: null,
   session: null,
+  isHydrated: true,
   signOut: signOutMock,
   signIn: vi.fn(),
   signUp: vi.fn(),
@@ -90,6 +92,7 @@ beforeEach(() => {
     tokens: { accessToken: "access-token", refreshToken: "refresh-token" },
     profile,
   };
+  authState.isHydrated = true;
 });
 
 afterEach(() => {
