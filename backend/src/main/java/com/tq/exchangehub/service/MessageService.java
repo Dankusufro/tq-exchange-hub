@@ -8,12 +8,15 @@ import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.repository.MessageRepository;
 import com.tq.exchangehub.repository.ProfileRepository;
 import com.tq.exchangehub.repository.TradeRepository;
+import com.tq.exchangehub.security.UserPrincipal;
 import com.tq.exchangehub.util.DtoMapper;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class MessageService {
@@ -41,15 +44,28 @@ public class MessageService {
                 .collect(Collectors.toList());
     }
 
-    public MessageDto create(MessageRequest request) {
+    public MessageDto create(MessageRequest request, UserPrincipal principal) {
+        if (principal == null || principal.getUserAccount() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
+        }
+
+        UUID senderProfileId = principal.getUserAccount().getProfile().getId();
+
         Trade trade =
                 tradeRepository
                         .findById(request.getTradeId())
                         .orElseThrow(() -> new IllegalArgumentException("Trade not found"));
+
         Profile sender =
                 profileRepository
-                        .findById(request.getSenderId())
+                        .findById(senderProfileId)
                         .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
+
+        if (!trade.getOwner().getId().equals(senderProfileId)
+                && !trade.getRequester().getId().equals(senderProfileId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "You are not a participant in this trade");
+        }
 
         Message message = new Message();
         message.setTrade(trade);

@@ -7,6 +7,7 @@ import MessageModal from "./MessageModal";
 
 interface ProductCardProps {
   id: string;
+  ownerId: string;
   title: string;
   description: string;
   image: string;
@@ -18,12 +19,14 @@ interface ProductCardProps {
   lookingFor: string[];
 }
 
-const ProductCard = ({ 
-  title, 
-  description, 
-  image, 
-  category, 
-  condition, 
+const ProductCard = ({
+  id,
+  ownerId,
+  title,
+  description,
+  image,
+  category,
+  condition,
   location, 
   userRating, 
   userName,
@@ -114,6 +117,8 @@ const ProductCard = ({
       <MessageModal
         isOpen={isMessageModalOpen}
         onClose={() => setIsMessageModalOpen(false)}
+        productId={id}
+        ownerId={ownerId}
         productTitle={title}
         userName={userName}
       />

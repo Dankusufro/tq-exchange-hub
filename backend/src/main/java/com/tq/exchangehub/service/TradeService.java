@@ -1,9 +1,16 @@
 package com.tq.exchangehub.service;
 
+import com.tq.exchangehub.dto.CreateTradeRequest;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.dto.TradeStatusUpdateRequest;
+import com.tq.exchangehub.entity.Item;
+import com.tq.exchangehub.entity.Message;
+import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
+import com.tq.exchangehub.repository.ItemRepository;
+import com.tq.exchangehub.repository.MessageRepository;
+import com.tq.exchangehub.repository.ProfileRepository;
 import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.util.DtoMapper;
 import java.time.OffsetDateTime;
@@ -20,9 +27,19 @@ import org.springframework.web.server.ResponseStatusException;
 public class TradeService {
 
     private final TradeRepository tradeRepository;
+    private final ItemRepository itemRepository;
+    private final ProfileRepository profileRepository;
+    private final MessageRepository messageRepository;
 
-    public TradeService(TradeRepository tradeRepository) {
+    public TradeService(
+            TradeRepository tradeRepository,
+            ItemRepository itemRepository,
+            ProfileRepository profileRepository,
+            MessageRepository messageRepository) {
         this.tradeRepository = tradeRepository;
+        this.itemRepository = itemRepository;
+        this.profileRepository = profileRepository;
+        this.messageRepository = messageRepository;
     }
 
     public List<TradeDto> listTrades(UUID profileId, List<TradeStatus> statuses) {
@@ -66,6 +83,63 @@ public class TradeService {
         trade.setStatus(request.getStatus());
         trade.setUpdatedAt(OffsetDateTime.now());
         Trade saved = tradeRepository.save(trade);
+        return DtoMapper.toTradeDto(saved);
+    }
+
+    public TradeDto create(CreateTradeRequest request, UUID requesterProfileId) {
+        Item ownerItem =
+                itemRepository
+                        .findById(request.getOwnerItemId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found"));
+
+        Profile owner = ownerItem.getOwner();
+        Profile requester =
+                profileRepository
+                        .findById(requesterProfileId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
+
+        if (owner.getId().equals(requesterProfileId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "You cannot propose a trade for your own item");
+        }
+
+        Item requesterItem = null;
+        if (request.getRequesterItemId() != null) {
+            requesterItem =
+                    itemRepository
+                            .findById(request.getRequesterItemId())
+                            .orElseThrow(
+                                    () ->
+                                            new ResponseStatusException(
+                                                    HttpStatus.NOT_FOUND, "Requested item not found"));
+            if (!requesterItem.getOwner().getId().equals(requesterProfileId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "The offered item must belong to the authenticated user");
+            }
+        }
+
+        Trade trade = new Trade();
+        trade.setOwner(owner);
+        trade.setRequester(requester);
+        trade.setOwnerItem(ownerItem);
+        trade.setRequesterItem(requesterItem);
+        trade.setMessage(request.getMessage());
+        trade.setStatus(TradeStatus.PENDING);
+        trade.setCreatedAt(OffsetDateTime.now());
+        trade.setUpdatedAt(OffsetDateTime.now());
+
+        Trade saved = tradeRepository.save(trade);
+
+        if (request.getMessage() != null && !request.getMessage().isBlank()) {
+            Message message = new Message();
+            message.setTrade(saved);
+            message.setSender(requester);
+            message.setContent(request.getMessage());
+            message.setCreatedAt(OffsetDateTime.now());
+            messageRepository.save(message);
+        }
+
         return DtoMapper.toTradeDto(saved);
     }
 

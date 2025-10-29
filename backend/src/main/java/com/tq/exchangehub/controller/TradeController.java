@@ -1,5 +1,6 @@
 package com.tq.exchangehub.controller;
 
+import com.tq.exchangehub.dto.CreateTradeRequest;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.dto.TradeStatusUpdateRequest;
 import com.tq.exchangehub.entity.TradeStatus;
@@ -30,6 +31,14 @@ public class TradeController {
 
     public TradeController(TradeService tradeService) {
         this.tradeService = tradeService;
+    }
+
+    @PostMapping
+    public ResponseEntity<TradeDto> create(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody CreateTradeRequest request) {
+        UUID profileId = extractProfileId(principal);
+        return ResponseEntity.ok(tradeService.create(request, profileId));
     }
 
     @GetMapping

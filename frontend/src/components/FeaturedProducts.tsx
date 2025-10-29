@@ -40,6 +40,7 @@ const FeaturedProducts = () => {
           <ProductCard
             key={item.id}
             id={item.id}
+            ownerId={item.owner?.id ?? ""}
             title={item.title}
             description={item.description}
             image={item.mainImageUrl ?? heroImage}
