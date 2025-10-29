@@ -20,10 +20,12 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
+@ConditionalOnProperty(value = "application.data.initializer.enabled", havingValue = "true")
 public class DataInitializer implements CommandLineRunner {
 
     private final CategoryRepository categoryRepository;
