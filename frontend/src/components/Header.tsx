@@ -191,9 +191,16 @@ const Header = () => {
 
           {/* Navigation */}
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="hidden sm:flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Publicar
+            <Button variant="outline" className="hidden sm:flex items-center gap-2" asChild>
+              <Link to="/listings/new">
+                <Plus className="h-4 w-4" />
+                Publicar
+              </Link>
+            </Button>
+            <Button variant="outline" size="icon" className="sm:hidden" asChild>
+              <Link to="/listings/new" aria-label="Crear una nueva publicación">
+                <Plus className="h-4 w-4" />
+              </Link>
             </Button>
             
             <Popover>

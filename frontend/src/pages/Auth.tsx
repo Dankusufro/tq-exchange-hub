@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,11 @@ type NotifiableError = Error & { status?: number; alreadyNotified?: boolean };
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation<{ from?: string }>();
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
+
+  const redirectTo = location.state?.from ?? "/";
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({
@@ -47,7 +50,7 @@ const Auth = () => {
         title: "Sesión iniciada",
         description: `Bienvenido de nuevo, ${session.profile.displayName}!`,
       });
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       const message =
         error instanceof Error
@@ -83,7 +86,7 @@ const Auth = () => {
         title: "Registro exitoso",
         description: `¡Hola ${session.profile.displayName}! Tu cuenta ya está lista para usarla en TruequePlus.`,
       });
-      navigate("/");
+      navigate(redirectTo, { replace: true });
     } catch (error) {
       const message =
         error instanceof Error
