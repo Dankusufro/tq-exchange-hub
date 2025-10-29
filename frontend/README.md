@@ -8,6 +8,15 @@ This directory contains the Lovable-generated React frontend for the TQ Exchange
 
 **URL**: https://lovable.dev/projects/211dc7bf-810c-4902-af07-4778c7a4955a
 
+## Environment configuration
+
+The frontend expects the backend URL in the `VITE_API_BASE_URL` environment variable. Copy `.env.example` and update the value to match where the API is exposed (for local development the backend runs on `http://localhost:8080`).
+
+```bash
+cp .env.example .env
+# edit .env if you need a different URL
+```
+
 ## How can I edit this code?
 
 There are several ways of editing your application.
