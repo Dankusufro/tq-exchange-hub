@@ -13,6 +13,7 @@ vi.mock("@/providers/AuthProvider", () => ({
   useAuth: () => ({
     user: null,
     session: null,
+    isHydrated: true,
     signIn: mockSignIn,
     signUp: mockSignUp,
     signOut: mockSignOut,

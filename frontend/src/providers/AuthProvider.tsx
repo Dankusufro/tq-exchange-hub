@@ -50,6 +50,7 @@ type RegisterCredentials = {
 type AuthContextValue = {
   user: Profile | null;
   session: AuthSession | null;
+  isHydrated: boolean;
   signIn: (credentials: LoginCredentials) => Promise<AuthSession>;
   signUp: (credentials: RegisterCredentials) => Promise<AuthSession>;
   signOut: () => Promise<void>;
@@ -119,6 +120,7 @@ const persistSession = (session: AuthSession | null) => {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<AuthSession | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const sessionRef = useRef<AuthSession | null>(null);
   const user = session?.profile ?? null;
   const { toast } = useToast();
@@ -152,17 +154,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [applySession, toast]);
 
   useEffect(() => {
+    let isMounted = true;
+
     const storedSession = readStoredSession();
 
     if (storedSession) {
       sessionRef.current = storedSession;
       setSession(storedSession);
       apiClient.setTokens(storedSession.tokens);
+      if (isMounted) {
+        setIsHydrated(true);
+      }
     }
 
-    if (apiClient.getTokens()) {
-      void fetchSession();
-    }
+    const hydrateSession = async () => {
+      if (!apiClient.getTokens()) {
+        if (isMounted) {
+          setIsHydrated(true);
+        }
+        return;
+      }
+
+      try {
+        await fetchSession();
+      } finally {
+        if (isMounted) {
+          setIsHydrated(true);
+        }
+      }
+    };
+
+    void hydrateSession();
 
     const unsubscribe = apiClient.subscribe((updatedTokens) => {
       if (!updatedTokens) {
@@ -194,7 +216,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       persistSession(nextSession);
     });
 
-    return unsubscribe;
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, [applySession, fetchSession]);
 
   const signIn = useCallback<AuthContextValue["signIn"]>(
@@ -279,11 +304,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     () => ({
       user,
       session,
+      isHydrated,
       signIn,
       signUp,
       signOut,
     }),
-    [session, signIn, signOut, signUp, user],
+    [isHydrated, session, signIn, signOut, signUp, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
