@@ -68,8 +68,8 @@ const Profile = () => {
     refetch,
   } = useQuery<Profile>({
     queryKey: ["profile", user?.id],
-    queryFn: async () => apiClient.get<Profile>("/api/profile/me"),
-    enabled: Boolean(user),
+    queryFn: async () => apiClient.get<Profile>(`/api/profiles/${user?.id}`),
+    enabled: Boolean(user?.id),
     initialData: user ?? undefined,
   });
 
