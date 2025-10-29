@@ -15,7 +15,7 @@ import { apiClient } from "@/lib/api";
 import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, MapPin, Phone, Sparkles, Star, TrendingUp } from "lucide-react";
+import { CalendarDays, ChevronLeft, MapPin, Phone, Sparkles, Star, TrendingUp } from "lucide-react";
 
 const formatDate = (value: string | null) => {
   if (!value) {
@@ -89,24 +89,26 @@ const Profile = () => {
       <Header />
       <main className="flex-1 bg-muted/30 py-12">
         <div className="container mx-auto px-4 space-y-10">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold text-foreground">Mi perfil</h1>
-              <p className="text-muted-foreground max-w-2xl">
-                Gestiona tu presencia en TruequePlus, comparte tu historia y mantiene al día tu
-                información para inspirar confianza en la comunidad.
-              </p>
-            </div>
-            <div className="flex flex-col items-stretch gap-3 md:items-end">
-              <Button
-                variant="outline"
-                className="self-start md:self-end"
-                onClick={() => navigate(-1)}
-              >
-                Volver
-              </Button>
+          <div className="flex flex-col gap-4">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="-ml-2 w-fit"
+              onClick={() => navigate("/")}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" /> Volver
+            </Button>
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-foreground">Mi perfil</h1>
+                <p className="text-muted-foreground max-w-2xl">
+                  Gestiona tu presencia en TruequePlus, comparte tu historia y mantiene al día tu
+                  información para inspirar confianza en la comunidad.
+                </p>
+              </div>
               {isFetching && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground md:pt-2">
                   <span className="h-3 w-3 animate-ping rounded-full bg-primary" />
                   Sincronizando con el servidor...
                 </div>
@@ -127,7 +129,7 @@ const Profile = () => {
                   <Button variant="destructive" onClick={() => refetch()}>
                     Reintentar
                   </Button>
-                  <Button variant="outline" onClick={() => navigate(-1)}>
+                  <Button variant="outline" onClick={() => navigate("/")}>
                     Volver
                   </Button>
                 </div>
