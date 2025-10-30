@@ -3,11 +3,12 @@ import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import { useFavorites } from "@/hooks/use-favorites";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, HeartOff } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, ChevronLeft, HeartOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 const Favorites = () => {
-  const { favorites, isLoading } = useFavorites();
+  const { favorites, isLoading, error, refresh } = useFavorites();
   const navigate = useNavigate();
 
   return (
@@ -32,6 +33,30 @@ const Favorites = () => {
               </p>
             </div>
           </div>
+
+          {error && (
+            <Alert variant="destructive" className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5" />
+                <div>
+                  <AlertTitle>No se pudieron sincronizar tus favoritos</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  void refresh();
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? "Intentando..." : "Reintentar"}
+              </Button>
+            </Alert>
+          )}
 
           {isLoading ? (
             <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
