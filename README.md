@@ -43,6 +43,19 @@ Once the backend is running you can explore every endpoint (and try requests) th
 
 The OpenAPI specification served at `/v3/api-docs` is also checked in CI to ensure it stays available.
 
+### Trade receipt workflow
+
+Accepted trades now produce a signed PDF receipt that can be downloaded or emailed:
+
+- `GET /api/trades/{id}/receipt` generates (or reuses) the PDF and returns it with the `X-Receipt-Hash`
+  and `X-Receipt-Signature` headers so clients can verify integrity.
+- `POST /api/trades/{id}/receipt/email` sends the same document as an attachment to the provided email
+  when the mail service is configured.
+
+The frontend surfaces these actions once a trade switches to the **accepted** state, allowing users to
+download the receipt immediately or trigger an email delivery while visual feedback reports progress and
+potential errors.
+
 ### Running both services with Docker Compose
 
 The root [`docker-compose.yml`](docker-compose.yml) spins up the PostgreSQL database, the Spring Boot backend and the Vite frontend, wiring them with compatible URLs:

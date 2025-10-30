@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { Check, Clock, X, LogIn, Ban } from "lucide-react";
 
 import useTradeRequests from "@/hooks/use-trade-requests";
+import TradeReceiptActions from "@/components/trade/TradeReceiptActions";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -231,6 +232,14 @@ const TradeRequests = () => {
                   )}
                 </div>
               </div>
+              {request.status === "accepted" && (isOwner || isRequester) && (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="mb-2 text-sm font-medium text-primary">
+                    El trueque se confirmó. Descarga o envía el comprobante oficial.
+                  </div>
+                  <TradeReceiptActions tradeId={request.id} />
+                </div>
+              )}
               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3 w-3" />
