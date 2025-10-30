@@ -29,6 +29,7 @@ import {
   ArrowLeftRight,
   Bell,
   Heart,
+  Loader2,
   Info,
   Menu,
   MessageCircle,
@@ -167,7 +168,11 @@ const Header = () => {
   const { notifications, markAsRead, markNotificationsAsRead } = useNotifications();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
-  const { favorites } = useFavorites();
+  const {
+    favorites,
+    isLoading: favoritesLoading,
+    error: favoritesError,
+  } = useFavorites();
   const navigate = useNavigate();
 
   const messageNotifications = notifications.filter((notification) => notification.category === "message");
@@ -198,6 +203,34 @@ const Header = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const renderFavoritesBadge = () => {
+    if (favoritesLoading) {
+      return (
+        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+          <Loader2 className="h-3 w-3 animate-spin" />
+        </Badge>
+      );
+    }
+
+    if (favoritesError) {
+      return (
+        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs bg-destructive text-destructive-foreground">
+          !
+        </Badge>
+      );
+    }
+
+    if (favorites.length > 0) {
+      return (
+        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+          {favorites.length}
+        </Badge>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -295,11 +328,7 @@ const Header = () => {
             >
               <Link to="/favorites" aria-label="Abrir favoritos">
                 <Heart className="h-5 w-5" />
-                {favorites.length > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {favorites.length}
-                  </Badge>
-                )}
+                {renderFavoritesBadge()}
               </Link>
             </Button>
             
