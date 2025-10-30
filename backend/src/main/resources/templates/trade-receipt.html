@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        color: #1f2933;
+        margin: 0;
+        padding: 40px;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      header {
+        border-bottom: 2px solid #0ea5e9;
+        margin-bottom: 24px;
+        padding-bottom: 12px;
+      }
+
+      h1 {
+        font-size: 24px;
+        margin: 0;
+        color: #0f172a;
+      }
+
+      h2 {
+        font-size: 18px;
+        margin: 16px 0 8px 0;
+        color: #0f172a;
+      }
+
+      .metadata,
+      .participants,
+      .items,
+      .signature {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+
+      .metadata dl,
+      .participants dl,
+      .items dl {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px 16px;
+        margin: 0;
+      }
+
+      dt {
+        font-weight: 600;
+      }
+
+      dd {
+        margin: 0;
+      }
+
+      .signature {
+        border-color: #0ea5e9;
+        background: #f0f9ff;
+      }
+
+      .signature code {
+        display: block;
+        word-break: break-all;
+        font-family: 'Fira Code', 'Courier New', monospace;
+        background: rgba(14, 165, 233, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+        color: #0f172a;
+      }
+
+      footer {
+        font-size: 10px;
+        color: #475569;
+        margin-top: 32px;
+      }
+    </style>
+    <title>Comprobante de Trueque</title>
+  </head>
+  <body>
+    <header>
+      <h1>Comprobante de Trueque</h1>
+      <p>Generado por TQ Exchange Hub</p>
+    </header>
+
+    <section class="metadata">
+      <h2>Detalles del trueque</h2>
+      <dl>
+        <div>
+          <dt>Identificador</dt>
+          <dd th:text="${tradeId}">00000000-0000-0000-0000-000000000000</dd>
+        </div>
+        <div>
+          <dt>Estado</dt>
+          <dd th:text="${status}">ACEPTADO</dd>
+        </div>
+        <div>
+          <dt>Generado</dt>
+          <dd th:text="${generatedAt}">01/01/2024 10:00</dd>
+        </div>
+        <div>
+          <dt>Actualizado</dt>
+          <dd th:text="${updatedAt}">01/01/2024 10:00</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="participants">
+      <h2>Participantes</h2>
+      <dl>
+        <div>
+          <dt>Propietario</dt>
+          <dd th:text="${ownerName}">Propietario</dd>
+        </div>
+        <div>
+          <dt>Solicitante</dt>
+          <dd th:text="${requesterName}">Solicitante</dd>
+        </div>
+        <div>
+          <dt>Ubicación del propietario</dt>
+          <dd th:text="${ownerLocation}">Ciudad</dd>
+        </div>
+        <div>
+          <dt>Ubicación del solicitante</dt>
+          <dd th:text="${requesterLocation}">Ciudad</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="items">
+      <h2>Artículos intercambiados</h2>
+      <dl>
+        <div>
+          <dt>Artículo del propietario</dt>
+          <dd th:text="${ownerItem}">Artículo A</dd>
+        </div>
+        <div th:if="${requesterItem != null}">
+          <dt>Artículo del solicitante</dt>
+          <dd th:text="${requesterItem}">Artículo B</dd>
+        </div>
+        <div th:if="${requesterItem == null}">
+          <dt>Artículo del solicitante</dt>
+          <dd>Intercambio unilateral</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section class="signature">
+      <h2>Firma digital</h2>
+      <p>
+        Este comprobante incluye una firma digital generada con SHA-256 a partir de los
+        datos del trueque. Puedes verificar su integridad utilizando el hash que se muestra a continuación.
+      </p>
+      <code th:text="${signature}">f1a2d3...</code>
+    </section>
+
+    <footer>
+      <p>
+        Si necesitas validar la autenticidad de este comprobante, compara el hash con el valor reportado por la
+        API de TQ Exchange Hub. Cualquier discrepancia indica que el documento ha sido modificado.
+      </p>
+    </footer>
+  </body>
+</html>

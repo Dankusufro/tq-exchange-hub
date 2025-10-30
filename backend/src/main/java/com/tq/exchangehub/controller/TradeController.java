@@ -1,10 +1,12 @@
 package com.tq.exchangehub.controller;
 
 import com.tq.exchangehub.dto.CreateTradeRequest;
+import com.tq.exchangehub.dto.ReceiptEmailRequest;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.dto.TradeStatusUpdateRequest;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.security.UserPrincipal;
+import com.tq.exchangehub.service.ReceiptService;
 import com.tq.exchangehub.service.TradeService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +18,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,9 +38,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class TradeController {
 
     private final TradeService tradeService;
+    private final ReceiptService receiptService;
 
-    public TradeController(TradeService tradeService) {
+    public TradeController(TradeService tradeService, ReceiptService receiptService) {
         this.tradeService = tradeService;
+        this.receiptService = receiptService;
     }
 
     @Operation(
@@ -173,6 +179,54 @@ public class TradeController {
             @AuthenticationPrincipal UserPrincipal principal, @PathVariable UUID id) {
         UUID profileId = extractProfileId(principal);
         return ResponseEntity.ok(tradeService.cancel(id, profileId));
+    }
+
+    @Operation(
+            summary = "Descargar comprobante del trueque",
+            description = "Genera (si es necesario) y devuelve el comprobante en formato PDF.",
+            security = {@SecurityRequirement(name = "bearerAuth")})
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Comprobante generado correctamente."),
+        @ApiResponse(responseCode = "400", description = "El trueque no está aceptado."),
+        @ApiResponse(responseCode = "401", description = "Autenticación requerida."),
+        @ApiResponse(responseCode = "403", description = "No participas en este trueque."),
+        @ApiResponse(responseCode = "404", description = "Trueque no encontrado.")
+    })
+    @GetMapping("/{id}/receipt")
+    public ResponseEntity<byte[]> downloadReceipt(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable UUID id) {
+        UUID profileId = extractProfileId(principal);
+        var receipt = receiptService.getOrCreateReceipt(id, profileId);
+        String filename = "trade-" + id + "-receipt.pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header("X-Receipt-Hash", receipt.getHash())
+                .header("X-Receipt-Signature", receipt.getSignature())
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(receipt.getPdfContent());
+    }
+
+    @Operation(
+            summary = "Enviar comprobante del trueque por correo",
+            description = "Envía el comprobante generado al correo indicado.",
+            security = {@SecurityRequirement(name = "bearerAuth")})
+    @ApiResponses({
+        @ApiResponse(responseCode = "202", description = "Comprobante enviado correctamente."),
+        @ApiResponse(responseCode = "400", description = "El trueque no está aceptado o el correo es inválido."),
+        @ApiResponse(responseCode = "401", description = "Autenticación requerida."),
+        @ApiResponse(responseCode = "403", description = "No participas en este trueque."),
+        @ApiResponse(responseCode = "404", description = "Trueque no encontrado."),
+        @ApiResponse(responseCode = "503", description = "Servicio de correo no disponible.")
+    })
+    @PostMapping("/{id}/receipt/email")
+    public ResponseEntity<Void> emailReceipt(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PathVariable UUID id,
+            @Valid @RequestBody ReceiptEmailRequest request) {
+        UUID profileId = extractProfileId(principal);
+        receiptService.emailReceipt(id, profileId, request.getEmail());
+        return ResponseEntity.accepted().build();
     }
 
     private UUID extractProfileId(UserPrincipal principal) {
