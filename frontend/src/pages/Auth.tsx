@@ -14,7 +14,7 @@ const Auth = () => {
   const navigate = useNavigate();
   // @ts-ignore
     const location = useLocation<{ from?: string }>();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, requestPasswordReset, resetPassword } = useAuth();
   const { toast } = useToast();
 
   const redirectTo = location.state?.from ?? "/";
@@ -28,6 +28,10 @@ const Auth = () => {
   });
   const [loginLoading, setLoginLoading] = useState(false);
   const [registerLoading, setRegisterLoading] = useState(false);
+  const [forgotForm, setForgotForm] = useState({ email: "" });
+  const [resetForm, setResetForm] = useState({ token: "", password: "", confirmPassword: "" });
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const showErrorToast = (title: string, description: string, error?: NotifiableError) => {
     if (error?.alreadyNotified) {
@@ -99,6 +103,64 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setForgotLoading(true);
+
+    try {
+      await requestPasswordReset({ email: forgotForm.email });
+      toast({
+        title: "Solicitud enviada",
+        description: "Revisa tu correo para continuar con el restablecimiento.",
+      });
+      setForgotForm({ email: "" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No pudimos procesar la solicitud. Inténtalo nuevamente.";
+      showErrorToast("No pudimos enviar el correo", message, error as NotifiableError);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (resetForm.password !== resetForm.confirmPassword) {
+      toast({
+        title: "Las contraseñas no coinciden",
+        description: "Revisa que ambas contraseñas sean iguales.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+      await resetPassword({
+        token: resetForm.token,
+        newPassword: resetForm.password,
+        confirmPassword: resetForm.confirmPassword,
+      });
+      toast({
+        title: "Contraseña actualizada",
+        description: "Ya puedes iniciar sesión con tu nueva contraseña.",
+      });
+      setResetForm({ token: "", password: "", confirmPassword: "" });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No pudimos actualizar tu contraseña. Inténtalo nuevamente.";
+      showErrorToast("Cambio de contraseña fallido", message, error as NotifiableError);
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-muted flex items-center justify-center p-4">
       <Card className="w-full max-w-xl">
@@ -110,9 +172,10 @@ const Auth = () => {
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="space-y-4">
-            <TabsList className="grid grid-cols-2">
+            <TabsList className="grid grid-cols-3">
               <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
               <TabsTrigger value="register">Registrarme</TabsTrigger>
+              <TabsTrigger value="recover">Recuperar acceso</TabsTrigger>
             </TabsList>
             <TabsContent value="login">
               <form className="space-y-4" onSubmit={handleLoginSubmit}>
@@ -175,7 +238,7 @@ const Auth = () => {
                     value={registerForm.password}
                     onChange={(event) => setRegisterForm({ ...registerForm, password: event.target.value })}
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
                 <div className="space-y-2">
@@ -189,13 +252,74 @@ const Auth = () => {
                       setRegisterForm({ ...registerForm, confirmPassword: event.target.value })
                     }
                     required
-                    minLength={6}
+                    minLength={8}
                   />
                 </div>
                 <Button type="submit" className="w-full" disabled={registerLoading}>
                   Crear cuenta
                 </Button>
               </form>
+            </TabsContent>
+            <TabsContent value="recover">
+              <div className="grid gap-6 md:grid-cols-2">
+                <form className="space-y-4" onSubmit={handleForgotPasswordSubmit}>
+                  <div className="space-y-2">
+                    <Label htmlFor="forgot-email">Correo electrónico</Label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="tu@correo.com"
+                      value={forgotForm.email}
+                      onChange={(event) => setForgotForm({ email: event.target.value })}
+                      required
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={forgotLoading}>
+                    Enviarme instrucciones
+                  </Button>
+                </form>
+                <form className="space-y-4" onSubmit={handleResetPasswordSubmit}>
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-token">Token de restablecimiento</Label>
+                    <Input
+                      id="reset-token"
+                      placeholder="Ingresa el token recibido"
+                      value={resetForm.token}
+                      onChange={(event) => setResetForm({ ...resetForm, token: event.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-password">Nueva contraseña</Label>
+                    <Input
+                      id="reset-password"
+                      type="password"
+                      placeholder="Crea una nueva contraseña"
+                      value={resetForm.password}
+                      onChange={(event) => setResetForm({ ...resetForm, password: event.target.value })}
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-confirm-password">Confirmar contraseña</Label>
+                    <Input
+                      id="reset-confirm-password"
+                      type="password"
+                      placeholder="Repite tu contraseña"
+                      value={resetForm.confirmPassword}
+                      onChange={(event) =>
+                        setResetForm({ ...resetForm, confirmPassword: event.target.value })
+                      }
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={resetLoading}>
+                    Cambiar contraseña
+                  </Button>
+                </form>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
