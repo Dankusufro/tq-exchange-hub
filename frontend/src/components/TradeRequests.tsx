@@ -232,14 +232,6 @@ const TradeRequests = () => {
                   )}
                 </div>
               </div>
-              {request.status === "accepted" && (isOwner || isRequester) && (
-                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                  <div className="mb-2 text-sm font-medium text-primary">
-                    El trueque se confirmó. Descarga o envía el comprobante oficial.
-                  </div>
-                  <TradeReceiptActions tradeId={request.id} />
-                </div>
-              )}
               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1">
                   <Clock className="h-3 w-3" />

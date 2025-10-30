@@ -26,8 +26,13 @@ export const useChatChannel = ({ tradeId, enabled = true, onMessage }: UseChatCh
   const [state, setState] = useState<ChatConnectionState>("disconnected");
   const websocketRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
+  const messageHandlerRef = useRef<typeof onMessage>(onMessage);
   const subscriptionId = useMemo(() => createSubscriptionId("trade", tradeId), [tradeId]);
   const isBrowser = typeof window !== "undefined";
+
+  useEffect(() => {
+    messageHandlerRef.current = onMessage;
+  }, [onMessage]);
 
   const cleanupConnection = useCallback(() => {
     if (reconnectTimeoutRef.current && typeof window !== "undefined") {
@@ -101,7 +106,7 @@ export const useChatChannel = ({ tradeId, enabled = true, onMessage }: UseChatCh
             case "MESSAGE": {
               try {
                 const payload = JSON.parse(frame.body) as ChatMessage;
-                onMessage?.(payload);
+                messageHandlerRef.current?.(payload);
               } catch (error) {
                 console.error("Failed to parse chat message", error);
               }
@@ -142,7 +147,7 @@ export const useChatChannel = ({ tradeId, enabled = true, onMessage }: UseChatCh
       isDisposed = true;
       cleanupConnection();
     };
-  }, [cleanupConnection, enabled, isBrowser, onMessage, subscriptionId, token, tradeId]);
+  }, [cleanupConnection, enabled, isBrowser, subscriptionId, token, tradeId]);
 
   return {
     state,
