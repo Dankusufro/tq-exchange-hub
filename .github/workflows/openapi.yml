@@ -1,0 +1,70 @@
+name: Verify OpenAPI documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify-openapi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build backend
+        working-directory: backend
+        run: mvn -B -DskipTests package
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          java -jar target/exchange-hub-backend-0.0.1-SNAPSHOT.jar >/tmp/backend.log 2>&1 &
+          echo $! > backend.pid
+          success=0
+          for i in {1..30}; do
+            if curl -sSf http://localhost:8080/api/health >/dev/null; then
+              success=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$success" -ne 1 ]; then
+            echo "Backend failed to start" >&2
+            cat /tmp/backend.log >&2 || true
+            exit 1
+          fi
+
+      - name: Check OpenAPI document
+        run: |
+          response=$(curl -sSf http://localhost:8080/v3/api-docs)
+          if [ -z "$response" ]; then
+            echo "OpenAPI document is empty" >&2
+            exit 1
+          fi
+          echo "OpenAPI document fetched successfully (first 200 chars):"
+          echo "$response" | head -c 200
+
+      - name: Stop backend
+        if: always()
+        working-directory: backend
+        run: |
+          if [ -f backend.pid ]; then
+            kill $(cat backend.pid) || true
+            rm backend.pid
+          fi
+
+      - name: Print backend log on failure
+        if: failure()
+        run: |
+          if [ -f /tmp/backend.log ]; then
+            echo "--- Backend log ---"
+            cat /tmp/backend.log
+          fi
