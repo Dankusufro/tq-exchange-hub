@@ -34,7 +34,7 @@ const Favorites = () => {
             </div>
           </div>
 
-          {error && (
+          {error && favorites.length > 0 && (
             <Alert variant="destructive" className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5" />

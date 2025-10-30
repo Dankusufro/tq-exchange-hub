@@ -76,6 +76,18 @@ const persistFavorites = (favorites: FavoriteItem[]) => {
   }
 };
 
+const clearStoredFavorites = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn("No se pudieron limpiar los favoritos almacenados", error);
+  }
+};
+
 const isApiError = (value: unknown): value is ApiError => value instanceof Error && "status" in value;
 
 const resolveErrorMessage = (error: unknown, fallback: string) => {
@@ -109,16 +121,27 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
       setFavorites(data);
       setError(null);
     } catch (caughtError) {
-      const message = resolveErrorMessage(caughtError, "No se pudieron cargar tus favoritos.");
       console.warn("No se pudieron obtener los favoritos desde la API", caughtError);
-      setError(message);
-      const storedFavorites = getStoredFavorites();
-      setFavorites(storedFavorites);
+
+      if (isApiError(caughtError) && caughtError.status === 401) {
+        clearStoredFavorites();
+        setFavorites([]);
+        setError(null);
+      } else {
+        const message = resolveErrorMessage(caughtError, "No se pudieron cargar tus favoritos.");
+        const storedFavorites = getStoredFavorites();
+        setFavorites(storedFavorites);
+        setError(storedFavorites.length === 0 ? null : message);
+      }
     } finally {
       hasInitialized.current = true;
       setIsLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    void fetchFavorites();
+  }, [fetchFavorites]);
 
   useEffect(() => {
     void fetchFavorites();
