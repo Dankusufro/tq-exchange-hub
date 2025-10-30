@@ -35,6 +35,14 @@ mvn test                   # Run backend tests
 
 CORS settings are externalised under the `application.cors.*` properties in [`backend/src/main/resources/application.properties`](backend/src/main/resources/application.properties). Override them with environment variables (for example `APPLICATION_CORS_ALLOWED-ORIGINS`) to match your deployment domain.
 
+### API documentation
+
+Once the backend is running you can explore every endpoint (and try requests) through the automatically generated Swagger UI:
+
+- Swagger UI: http://localhost:8080/swagger-ui/index.html
+
+The OpenAPI specification served at `/v3/api-docs` is also checked in CI to ensure it stays available.
+
 ### Running both services with Docker Compose
 
 The root [`docker-compose.yml`](docker-compose.yml) spins up the PostgreSQL database, the Spring Boot backend and the Vite frontend, wiring them with compatible URLs:
