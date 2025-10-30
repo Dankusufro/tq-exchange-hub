@@ -144,6 +144,10 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchFavorites]);
 
   useEffect(() => {
+    void fetchFavorites();
+  }, [fetchFavorites]);
+
+  useEffect(() => {
     if (!hasInitialized.current) {
       return;
     }
