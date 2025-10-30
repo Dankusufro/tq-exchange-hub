@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,14 +25,20 @@ public class MessageService {
     private final MessageRepository messageRepository;
     private final TradeRepository tradeRepository;
     private final ProfileRepository profileRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     public MessageService(
             MessageRepository messageRepository,
             TradeRepository tradeRepository,
-            ProfileRepository profileRepository) {
+            ProfileRepository profileRepository,
+            SimpMessagingTemplate messagingTemplate,
+            NotificationService notificationService) {
         this.messageRepository = messageRepository;
         this.tradeRepository = tradeRepository;
         this.profileRepository = profileRepository;
+        this.messagingTemplate = messagingTemplate;
+        this.notificationService = notificationService;
     }
 
     public List<MessageDto> getMessagesForTrade(UUID tradeId) {
@@ -73,6 +80,20 @@ public class MessageService {
         message.setContent(request.getContent());
         message.setCreatedAt(OffsetDateTime.now());
         Message saved = messageRepository.save(message);
-        return DtoMapper.toMessageDto(saved);
+        MessageDto dto = DtoMapper.toMessageDto(saved);
+
+        messagingTemplate.convertAndSend(
+                "/topic/trades/" + trade.getId() + "/messages",
+                dto);
+
+        Profile recipient =
+                trade.getOwner().getId().equals(senderProfileId)
+                        ? trade.getRequester()
+                        : trade.getOwner();
+        if (recipient != null && recipient.getId() != null && !recipient.getId().equals(senderProfileId)) {
+            notificationService.notifyMessage(recipient, saved);
+        }
+
+        return dto;
     }
 }
