@@ -16,6 +16,8 @@ import { useAuth } from "@/providers/AuthProvider";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ChevronLeft, MapPin, Phone, Sparkles, Star, TrendingUp } from "lucide-react";
+import TradeChat from "@/components/trade/TradeChat";
+import useTradeRequests from "@/hooks/use-trade-requests";
 
 const formatDate = (value: string | null) => {
   if (!value) {
@@ -62,6 +64,7 @@ type Profile = {
 const Profile = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { requests: tradeRequests } = useTradeRequests();
 
   const {
     data: profile,
@@ -83,6 +86,8 @@ const Profile = () => {
   const joinedDate = formatDate(currentProfile.createdAt);
   const ratingLabel = formatRating(currentProfile.rating);
   const formattedPhone = formatPhone(currentProfile.phone);
+
+  const activeTradeId = tradeRequests.length > 0 ? tradeRequests[0].id : null;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -244,6 +249,7 @@ const Profile = () => {
                   </dl>
                 </CardContent>
               </Card>
+              <TradeChat tradeId={activeTradeId} className="lg:col-span-2" />
             </div>
           )}
         </div>
