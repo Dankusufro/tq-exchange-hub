@@ -4,7 +4,7 @@ CREATE TABLE categories (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     icon VARCHAR(255),
-    created_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE profiles (
@@ -16,8 +16,8 @@ CREATE TABLE profiles (
     phone VARCHAR(50),
     rating DOUBLE PRECISION,
     total_trades INTEGER,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
 CREATE TABLE user_accounts (
@@ -25,7 +25,7 @@ CREATE TABLE user_accounts (
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     profile_id UUID NOT NULL UNIQUE,
-    created_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     role VARCHAR(20) NOT NULL,
     CONSTRAINT fk_user_accounts_profile FOREIGN KEY (profile_id) REFERENCES profiles (id)
 );
@@ -41,8 +41,8 @@ CREATE TABLE items (
     is_available BOOLEAN,
     is_service BOOLEAN,
     location VARCHAR(255),
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_items_owner FOREIGN KEY (user_id) REFERENCES profiles (id),
     CONSTRAINT fk_items_category FOREIGN KEY (category_id) REFERENCES categories (id)
 );
@@ -69,8 +69,8 @@ CREATE TABLE trades (
     requester_item_id UUID,
     message TEXT,
     status VARCHAR(50) NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_trades_owner FOREIGN KEY (owner_id) REFERENCES profiles (id),
     CONSTRAINT fk_trades_requester FOREIGN KEY (requester_id) REFERENCES profiles (id),
     CONSTRAINT fk_trades_owner_item FOREIGN KEY (owner_item_id) REFERENCES items (id),
@@ -82,7 +82,7 @@ CREATE TABLE messages (
     trade_id UUID NOT NULL,
     sender_id UUID NOT NULL,
     content TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_messages_trade FOREIGN KEY (trade_id) REFERENCES trades (id) ON DELETE CASCADE,
     CONSTRAINT fk_messages_sender FOREIGN KEY (sender_id) REFERENCES profiles (id)
 );
@@ -94,7 +94,7 @@ CREATE TABLE reviews (
     reviewed_id UUID NOT NULL,
     rating INTEGER NOT NULL,
     comment TEXT,
-    created_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     CONSTRAINT fk_reviews_trade FOREIGN KEY (trade_id) REFERENCES trades (id) ON DELETE CASCADE,
     CONSTRAINT fk_reviews_reviewer FOREIGN KEY (reviewer_id) REFERENCES profiles (id),
     CONSTRAINT fk_reviews_reviewed FOREIGN KEY (reviewed_id) REFERENCES profiles (id)
