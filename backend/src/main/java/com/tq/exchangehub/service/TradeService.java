@@ -87,17 +87,36 @@ public class TradeService {
                         .findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Trade not found"));
 
+        TradeStatus requestedStatus = request.getStatus();
+
+        if (requestedStatus == TradeStatus.CANCELLED) {
+            return cancelTrade(trade, profileId);
+        }
+
         if (!trade.getOwner().getId().equals(profileId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "You do not have permission to modify this trade request.");
         }
 
-        trade.setStatus(request.getStatus());
-        trade.setUpdatedAt(OffsetDateTime.now());
-        Trade saved = tradeRepository.save(trade);
-        eventPublisher.publishEvent(new TradeStatusChangedEvent(saved, profileId));
-        return DtoMapper.toTradeDto(saved);
+        if (trade.getStatus() != TradeStatus.PENDING
+                && (requestedStatus == TradeStatus.ACCEPTED
+                        || requestedStatus == TradeStatus.REJECTED)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only pending trades can be accepted or rejected.");
+        }
+
+        return applyStatus(trade, requestedStatus, profileId);
+    }
+
+    public TradeDto cancel(UUID id, UUID profileId) {
+        Trade trade =
+                tradeRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Trade not found"));
+
+        return cancelTrade(trade, profileId);
     }
 
     public TradeDto create(CreateTradeRequest request, UUID requesterProfileId) {
@@ -176,5 +195,29 @@ public class TradeService {
         }
 
         return new ArrayList<>(new LinkedHashSet<>(statuses));
+    }
+
+    private TradeDto cancelTrade(Trade trade, UUID profileId) {
+        if (!trade.getRequester().getId().equals(profileId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only the requester can cancel this trade.");
+        }
+
+        if (trade.getStatus() != TradeStatus.PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only pending trades can be cancelled.");
+        }
+
+        return applyStatus(trade, TradeStatus.CANCELLED, profileId);
+    }
+
+    private TradeDto applyStatus(Trade trade, TradeStatus status, UUID actorProfileId) {
+        trade.setStatus(status);
+        trade.setUpdatedAt(OffsetDateTime.now());
+        Trade saved = tradeRepository.save(trade);
+        eventPublisher.publishEvent(new TradeStatusChangedEvent(saved, actorProfileId));
+        return DtoMapper.toTradeDto(saved);
     }
 }
