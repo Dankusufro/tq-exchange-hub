@@ -4,12 +4,14 @@ import com.tq.exchangehub.dto.CategoryDto;
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.ItemSummaryDto;
 import com.tq.exchangehub.dto.MessageDto;
+import com.tq.exchangehub.dto.NotificationDto;
 import com.tq.exchangehub.dto.ProfileDto;
 import com.tq.exchangehub.dto.ReviewDto;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.entity.Category;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.Message;
+import com.tq.exchangehub.entity.Notification;
 import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Review;
 import com.tq.exchangehub.entity.Trade;
@@ -120,6 +122,19 @@ public final class DtoMapper {
         dto.setRating(review.getRating());
         dto.setComment(review.getComment());
         dto.setCreatedAt(review.getCreatedAt());
+        return dto;
+    }
+
+    public static NotificationDto toNotificationDto(Notification notification) {
+        NotificationDto dto = new NotificationDto();
+        dto.setId(notification.getId());
+        dto.setType(notification.getType());
+        dto.setTitle(notification.getTitle());
+        dto.setMessage(notification.getMessage());
+        dto.setRead(Boolean.TRUE.equals(notification.getRead()));
+        dto.setCreatedAt(notification.getCreatedAt());
+        dto.setTradeId(notification.getTradeId());
+        dto.setMessageId(notification.getMessageId());
         return dto;
     }
 }
