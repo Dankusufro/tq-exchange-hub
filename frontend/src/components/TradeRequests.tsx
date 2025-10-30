@@ -5,6 +5,7 @@ import { es } from "date-fns/locale";
 import { Check, Clock, X, LogIn, Ban } from "lucide-react";
 
 import useTradeRequests from "@/hooks/use-trade-requests";
+import TradeReceiptActions from "@/components/trade/TradeReceiptActions";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

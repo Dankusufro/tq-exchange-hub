@@ -13,7 +13,7 @@ interface ProductCardProps {
   ownerId: string;
   title: string;
   description: string;
-  image: string;
+  image: string | null;
   category: string;
   condition: string;
   location: string;
@@ -54,23 +54,37 @@ const ProductCard = ({
       lookingFor
     };
 
-    const added = await toggleFavorite(favoriteItem);
+    try {
+      const added = await toggleFavorite(favoriteItem);
 
-    toast({
-      title: added ? "Añadido a favoritos" : "Eliminado de favoritos",
-      description: added
-        ? "Podrás consultar este producto desde tu lista de favoritos."
-        : "Ya no verás este producto en tu lista de favoritos.",
-    });
+      toast({
+        title: added ? "Añadido a favoritos" : "Eliminado de favoritos",
+        description: added
+          ? "Podrás consultar este producto desde tu lista de favoritos."
+          : "Ya no verás este producto en tu lista de favoritos.",
+      });
+    } catch (error) {
+      const description =
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar tu lista de favoritos. Inténtalo nuevamente.";
+
+      toast({
+        title: "Error al actualizar favoritos",
+        description,
+        variant: "destructive",
+      });
+    }
   }, [toggleFavorite, id, ownerId, title, description, image, category, condition, location, userRating, userName, lookingFor, toast]);
 
   const favorite = isFavorite(id);
+  const imageUrl = image ?? "https://placehold.co/600x400?text=Sin+imagen";
   return (
     <Card className="group hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1 bg-gradient-card border-border/50">
       <CardContent className="p-0">
         <div className="relative overflow-hidden rounded-t-lg">
-          <img 
-            src={image} 
+          <img
+            src={imageUrl}
             alt={title}
             className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           />

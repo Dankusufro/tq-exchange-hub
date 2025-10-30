@@ -54,6 +54,7 @@ type RequestOptions = {
   body?: unknown;
   headers?: Record<string, string>;
   auth?: boolean;
+  responseType?: "json" | "text" | "blob" | "arrayBuffer";
 };
 
 export type ApiError = Error & { status?: number };
@@ -154,7 +155,7 @@ export class APIClient {
   }
 
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { method = "GET", body, headers = {}, auth = true } = options;
+    const { method = "GET", body, headers = {}, auth = true, responseType } = options;
 
     const serializedBody = serializeBody(body);
 
@@ -203,11 +204,19 @@ export class APIClient {
       return undefined as T;
     }
 
-    if (isJsonContent(response)) {
-      return (await response.json()) as T;
-    }
+    const normalizedType = responseType ?? (isJsonContent(response) ? "json" : "text");
 
-    return (await response.text()) as T;
+    switch (normalizedType) {
+      case "blob":
+        return (await response.blob()) as T;
+      case "arrayBuffer":
+        return (await response.arrayBuffer()) as T;
+      case "text":
+        return (await response.text()) as T;
+      case "json":
+      default:
+        return (await response.json()) as T;
+    }
   }
 
   get<T>(path: string, options: Omit<RequestOptions, "method"> = {}) {
