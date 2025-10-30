@@ -22,6 +22,7 @@ services:
     container_name: tq_exchange_backend
     working_dir: /app
     environment:
+      SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-tqexchange}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-tqexchange}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-tqexchange}
