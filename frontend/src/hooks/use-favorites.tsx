@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode
 } from "react";
+import { apiClient, type ApiError } from "@/lib/api";
 
 const STORAGE_KEY = "tq-favorites";
 
@@ -16,7 +17,7 @@ export interface FavoriteItem {
   ownerId: string;
   title: string;
   description: string;
-  image: string;
+  image: string | null;
   category: string;
   condition: string;
   location: string;
@@ -28,10 +29,12 @@ export interface FavoriteItem {
 interface FavoritesContextValue {
   favorites: FavoriteItem[];
   isLoading: boolean;
+  error: string | null;
   isFavorite: (productId: string) => boolean;
   addFavorite: (item: FavoriteItem) => Promise<void>;
   removeFavorite: (productId: string) => Promise<void>;
   toggleFavorite: (item: FavoriteItem) => Promise<boolean>;
+  refresh: () => Promise<void>;
 }
 
 const FavoritesContext = createContext<FavoritesContextValue | undefined>(undefined);
@@ -73,41 +76,72 @@ const persistFavorites = (favorites: FavoriteItem[]) => {
   }
 };
 
+const clearStoredFavorites = () => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn("No se pudieron limpiar los favoritos almacenados", error);
+  }
+};
+
+const isApiError = (value: unknown): value is ApiError => value instanceof Error && "status" in value;
+
+const resolveErrorMessage = (error: unknown, fallback: string) => {
+  if (isApiError(error) && error.status === 401) {
+    return "Debes iniciar sesión para sincronizar tus favoritos.";
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const hasInitialized = useRef(false);
 
-  useEffect(() => {
-    const fetchFavorites = async () => {
-      try {
-        const response = await fetch("/api/favorites", { credentials: "include" });
+  const fetchFavorites = useCallback(async () => {
+    setIsLoading(true);
 
-        if (!response.ok) {
-          throw new Error("Respuesta inválida del servidor");
-        }
+    try {
+      const data = await apiClient.get<FavoriteItem[]>("/api/favorites");
 
-        const data = (await response.json()) as FavoriteItem[];
-
-        if (Array.isArray(data)) {
-          setFavorites(data);
-          persistFavorites(data);
-          return;
-        }
-
+      if (!Array.isArray(data)) {
         throw new Error("Formato de favoritos inválido");
-      } catch (error) {
-        console.warn("No se pudieron obtener los favoritos desde la API, usando almacenamiento local", error);
+      }
+
+      setFavorites(data);
+      setError(null);
+    } catch (caughtError) {
+      console.warn("No se pudieron obtener los favoritos desde la API", caughtError);
+
+      if (isApiError(caughtError) && caughtError.status === 401) {
+        clearStoredFavorites();
+        setFavorites([]);
+        setError(null);
+      } else {
+        const message = resolveErrorMessage(caughtError, "No se pudieron cargar tus favoritos.");
         const storedFavorites = getStoredFavorites();
         setFavorites(storedFavorites);
-      } finally {
-        hasInitialized.current = true;
-        setIsLoading(false);
+        setError(storedFavorites.length === 0 ? null : message);
       }
-    };
-
-    void fetchFavorites();
+    } finally {
+      hasInitialized.current = true;
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchFavorites();
+  }, [fetchFavorites]);
 
   useEffect(() => {
     if (!hasInitialized.current) {
@@ -117,87 +151,57 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
     persistFavorites(favorites);
   }, [favorites]);
 
-  const syncAddFavorite = useCallback(async (item: FavoriteItem) => {
-    try {
-      const response = await fetch("/api/favorites", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        credentials: "include",
-        body: JSON.stringify({ productId: item.id })
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al guardar el favorito en el servidor");
-      }
-    } catch (error) {
-      console.warn("Error al sincronizar favorito agregado", error);
-    }
-  }, []);
-
-  const syncRemoveFavorite = useCallback(async (productId: string) => {
-    try {
-      const response = await fetch(`/api/favorites/${productId}`, {
-        method: "DELETE",
-        credentials: "include"
-      });
-
-      if (!response.ok) {
-        throw new Error("Error al eliminar el favorito en el servidor");
-      }
-    } catch (error) {
-      console.warn("Error al sincronizar favorito eliminado", error);
-    }
-  }, []);
-
   const addFavorite = useCallback(
     async (item: FavoriteItem) => {
-      setFavorites((previous) => {
-        if (previous.some((favorite) => favorite.id === item.id)) {
-          return previous;
-        }
+      try {
+        const response = await apiClient.post<FavoriteItem>("/api/favorites", { itemId: item.id });
+        const favorite = response ?? item;
 
-        return [...previous, item];
-      });
+        setFavorites((previous) => {
+          if (previous.some((existing) => existing.id === favorite.id)) {
+            return previous;
+          }
 
-      await syncAddFavorite(item);
+          return [...previous, favorite];
+        });
+        setError(null);
+      } catch (caughtError) {
+        const message = resolveErrorMessage(caughtError, "No se pudo guardar el favorito.");
+        setError(message);
+        throw caughtError instanceof Error ? caughtError : new Error(message);
+      }
     },
-    [syncAddFavorite]
+    []
   );
 
   const removeFavorite = useCallback(
     async (productId: string) => {
-      setFavorites((previous) => previous.filter((favorite) => favorite.id !== productId));
-      await syncRemoveFavorite(productId);
+      try {
+        await apiClient.delete(`/api/favorites/${productId}`);
+        setFavorites((previous) => previous.filter((favorite) => favorite.id !== productId));
+        setError(null);
+      } catch (caughtError) {
+        const message = resolveErrorMessage(caughtError, "No se pudo eliminar el favorito.");
+        setError(message);
+        throw caughtError instanceof Error ? caughtError : new Error(message);
+      }
     },
-    [syncRemoveFavorite]
+    []
   );
 
   const toggleFavorite = useCallback(
     async (item: FavoriteItem) => {
-      let added = false;
+      const exists = favorites.some((favorite) => favorite.id === item.id);
 
-      setFavorites((previous) => {
-        const exists = previous.some((favorite) => favorite.id === item.id);
-        added = !exists;
-
-        if (exists) {
-          return previous.filter((favorite) => favorite.id !== item.id);
-        }
-
-        return [...previous, item];
-      });
-
-      if (added) {
-        await syncAddFavorite(item);
-      } else {
-        await syncRemoveFavorite(item.id);
+      if (exists) {
+        await removeFavorite(item.id);
+        return false;
       }
 
-      return added;
+      await addFavorite(item);
+      return true;
     },
-    [syncAddFavorite, syncRemoveFavorite]
+    [favorites, addFavorite, removeFavorite]
   );
 
   const isFavorite = useCallback(
@@ -205,9 +209,22 @@ export const FavoritesProvider = ({ children }: { children: ReactNode }) => {
     [favorites]
   );
 
+  const refresh = useCallback(async () => {
+    await fetchFavorites();
+  }, [fetchFavorites]);
+
   const value = useMemo(
-    () => ({ favorites, isLoading, isFavorite, addFavorite, removeFavorite, toggleFavorite }),
-    [favorites, isLoading, isFavorite, addFavorite, removeFavorite, toggleFavorite]
+    () => ({
+      favorites,
+      isLoading,
+      error,
+      isFavorite,
+      addFavorite,
+      removeFavorite,
+      toggleFavorite,
+      refresh
+    }),
+    [favorites, isLoading, error, isFavorite, addFavorite, removeFavorite, toggleFavorite, refresh]
   );
 
   return <FavoritesContext.Provider value={value}>{children}</FavoritesContext.Provider>;
