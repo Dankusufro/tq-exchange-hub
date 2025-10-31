@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient, type ApiError } from "@/lib/api";
 import { useAuth } from "@/providers/AuthProvider";
 
-export type TradeRequestStatus = "accepted" | "rejected" | "pending";
+export type TradeRequestStatus = "accepted" | "rejected" | "pending" | "cancelled";
 
 export type TradeRequest = {
   id: string;
@@ -26,7 +26,7 @@ interface TradeDto {
   ownerItemId: string;
   requesterItemId: string | null;
   message: string | null;
-  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  status: "PENDING" | "ACCEPTED" | "REJECTED" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
 }
@@ -42,6 +42,9 @@ interface UseTradeRequestsResult {
   error: string | null;
   acceptRequest: (id: string) => Promise<void>;
   rejectRequest: (id: string) => Promise<void>;
+  cancelRequest: (id: string) => Promise<void>;
+  downloadReceipt: (id: string) => Promise<Blob>;
+  sendReceiptByEmail: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -180,6 +183,63 @@ const useTradeRequests = (options?: UseTradeRequestsOptions): UseTradeRequestsRe
     [rejectMutation],
   );
 
+  const cancelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        const response = await apiClient.post<TradeDto>(`/api/trades/${id}/cancel`);
+        return normalizeTrade(response);
+      } catch (error) {
+        await handleRequestError(error, "No se pudo cancelar la solicitud");
+      }
+    },
+    onSuccess: (updatedTrade) => {
+      if (updatedTrade) {
+        updateCachedTrade(updatedTrade);
+      }
+    },
+  });
+
+  const cancelRequest = useCallback<UseTradeRequestsResult["cancelRequest"]>(
+    async (id) => {
+      try {
+        await cancelMutation.mutateAsync(id);
+      } catch (error) {
+        throw error instanceof Error ? error : new Error("No se pudo cancelar la solicitud");
+      }
+    },
+    [cancelMutation],
+  );
+
+  const downloadReceipt = useCallback<UseTradeRequestsResult["downloadReceipt"]>(
+    async (id) => {
+      try {
+        return await apiClient.get<Blob>(`/api/trades/${id}/receipt`, {
+          responseType: "blob",
+          headers: { Accept: "application/pdf" },
+        });
+      } catch (error) {
+        await handleRequestError(error, "No se pudo generar el comprobante");
+      }
+
+      throw new Error("No se pudo generar el comprobante");
+    },
+    [handleRequestError],
+  );
+
+  const sendReceiptByEmail = useCallback<UseTradeRequestsResult["sendReceiptByEmail"]>(
+    async (id) => {
+      try {
+        await apiClient.post<void>(`/api/trades/${id}/receipt/email`);
+        return;
+      } catch (error) {
+        await handleRequestError(error, "No se pudo enviar el comprobante por correo");
+      }
+
+      throw new Error("No se pudo enviar el comprobante por correo");
+    },
+    [handleRequestError],
+  );
+
   const refresh = useCallback(async () => {
     if (!session) {
       return;
@@ -197,6 +257,9 @@ const useTradeRequests = (options?: UseTradeRequestsOptions): UseTradeRequestsRe
     error: hasSession ? tradesQuery.error?.message ?? null : null,
     acceptRequest,
     rejectRequest,
+    cancelRequest,
+    downloadReceipt,
+    sendReceiptByEmail,
     refresh,
   };
 };

@@ -22,7 +22,27 @@ const deriveApiBaseUrl = () => {
   return "http://localhost:8080";
 };
 
-const API_BASE_URL = deriveApiBaseUrl();
+export const API_BASE_URL = deriveApiBaseUrl();
+
+export const buildWebSocketUrl = (path: string) => {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  try {
+    const baseUrl = new URL(API_BASE_URL);
+    const protocol = baseUrl.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${baseUrl.host}${normalizedPath}`;
+  } catch (error) {
+    if (API_BASE_URL.startsWith("https://")) {
+      return `wss://${API_BASE_URL.replace(/^https:\/\//, "")}${normalizedPath}`;
+    }
+
+    if (API_BASE_URL.startsWith("http://")) {
+      return `ws://${API_BASE_URL.replace(/^http:\/\//, "")}${normalizedPath}`;
+    }
+
+    return normalizedPath;
+  }
+};
 
 export type AuthTokens = {
   accessToken: string;
@@ -34,6 +54,7 @@ type RequestOptions = {
   body?: unknown;
   headers?: Record<string, string>;
   auth?: boolean;
+  responseType?: "json" | "text" | "blob" | "arrayBuffer";
 };
 
 export type ApiError = Error & { status?: number };
@@ -134,7 +155,7 @@ export class APIClient {
   }
 
   async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { method = "GET", body, headers = {}, auth = true } = options;
+    const { method = "GET", body, headers = {}, auth = true, responseType } = options;
 
     const serializedBody = serializeBody(body);
 
@@ -183,11 +204,19 @@ export class APIClient {
       return undefined as T;
     }
 
-    if (isJsonContent(response)) {
-      return (await response.json()) as T;
-    }
+    const resolvedResponseType = responseType ?? (isJsonContent(response) ? "json" : "text");
 
-    return (await response.text()) as T;
+    switch (resolvedResponseType) {
+      case "json":
+        return (await response.json()) as T;
+      case "blob":
+        return (await response.blob()) as T;
+      case "arrayBuffer":
+        return (await response.arrayBuffer()) as T;
+      case "text":
+      default:
+        return (await response.text()) as T;
+    }
   }
 
   get<T>(path: string, options: Omit<RequestOptions, "method"> = {}) {
