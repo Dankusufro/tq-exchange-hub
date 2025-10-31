@@ -7,6 +7,7 @@ import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.entity.UserAccount;
 import com.tq.exchangehub.repository.TradeRepository;
+import com.tq.exchangehub.repository.UserAccountRepository;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
@@ -41,11 +42,16 @@ public class ReceiptService {
 
     private final TradeRepository tradeRepository;
     private final JavaMailSender mailSender;
+    private final UserAccountRepository userAccountRepository;
     private final boolean mailSenderConfigured;
 
-    public ReceiptService(TradeRepository tradeRepository, JavaMailSender mailSender) {
+    public ReceiptService(
+            TradeRepository tradeRepository,
+            JavaMailSender mailSender,
+            UserAccountRepository userAccountRepository) {
         this.tradeRepository = tradeRepository;
         this.mailSender = mailSender;
+        this.userAccountRepository = userAccountRepository;
         this.mailSenderConfigured = isMailSenderConfigured(mailSender);
     }
 
@@ -100,18 +106,17 @@ public class ReceiptService {
     }
 
     private Trade findTradeForParticipant(UUID tradeId, UUID profileId) {
-        Trade trade =
-                tradeRepository
-                        .findById(tradeId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trade not found"));
-        UUID ownerId = trade.getOwner().getId();
-        UUID requesterId = trade.getRequester().getId();
-
-        if (!ownerId.equals(profileId) && !requesterId.equals(profileId)) {
-            throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "You do not have permission to access this trade receipt.");
-        }
-        return trade;
+        return tradeRepository
+                .findByIdForParticipant(tradeId, profileId)
+                .orElseThrow(
+                        () -> {
+                            if (!tradeRepository.existsById(tradeId)) {
+                                return new ResponseStatusException(HttpStatus.NOT_FOUND, "Trade not found");
+                            }
+                            return new ResponseStatusException(
+                                    HttpStatus.FORBIDDEN,
+                                    "You do not have permission to access this trade receipt.");
+                        });
     }
 
     private void requireAccepted(Trade trade) {
@@ -266,10 +271,14 @@ public class ReceiptService {
 
     private String resolveEmail(Profile profile) {
         UserAccount account = profile.getAccount();
-        if (account != null && StringUtils.hasText(account.getEmail())) {
-            return account.getEmail();
+        if (account == null || !StringUtils.hasText(account.getEmail())) {
+            return userAccountRepository
+                    .findByProfileId(profile.getId())
+                    .map(UserAccount::getEmail)
+                    .filter(StringUtils::hasText)
+                    .orElse(null);
         }
-        return null;
+        return account.getEmail();
     }
 
     private String formatEmailForDisplay(Profile profile) {
