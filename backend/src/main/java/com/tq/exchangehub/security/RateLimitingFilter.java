@@ -1,10 +1,9 @@
 package com.tq.exchangehub.security;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
-import io.github.bucket4j.ConsumptionProbe;
-import io.github.bucket4j.Refill;
+import com.bucket4j.Bandwidth;
+import com.bucket4j.Bucket;
+import com.bucket4j.Bucket4j;
+import com.bucket4j.ConsumptionProbe;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
@@ -35,6 +34,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         "/swagger-ui.html",
         "/swagger-ui/**"
     };
+    private static final long RATE_LIMIT_CAPACITY = 100;
+    private static final Duration REFILL_PERIOD = Duration.ofMinutes(1);
+
     private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
     private final AntPathMatcher matcher = new AntPathMatcher();
     private final Counter allowedRequests;
@@ -90,8 +92,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private Bucket newBucket() {
-        Refill refill = Refill.greedy(100, Duration.ofMinutes(1));
-        Bandwidth limit = Bandwidth.classic(100, refill);
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(RATE_LIMIT_CAPACITY)
+                .refillIntervally(RATE_LIMIT_CAPACITY, REFILL_PERIOD)
+                .build();
         return Bucket4j.builder().addLimit(limit).build();
     }
 
