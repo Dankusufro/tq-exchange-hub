@@ -4,17 +4,22 @@ import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Trade;
+import com.tq.exchangehub.entity.TradeReceipt;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.entity.UserAccount;
+import com.tq.exchangehub.repository.TradeReceiptRepository;
 import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.repository.UserAccountRepository;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.NumberFormat;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -43,31 +48,45 @@ public class ReceiptService {
     private final TradeRepository tradeRepository;
     private final JavaMailSender mailSender;
     private final UserAccountRepository userAccountRepository;
+    private final TradeReceiptRepository tradeReceiptRepository;
     private final boolean mailSenderConfigured;
 
     public ReceiptService(
             TradeRepository tradeRepository,
             JavaMailSender mailSender,
-            UserAccountRepository userAccountRepository) {
+            UserAccountRepository userAccountRepository,
+            TradeReceiptRepository tradeReceiptRepository) {
         this.tradeRepository = tradeRepository;
         this.mailSender = mailSender;
         this.userAccountRepository = userAccountRepository;
+        this.tradeReceiptRepository = tradeReceiptRepository;
         this.mailSenderConfigured = isMailSenderConfigured(mailSender);
     }
 
     @Transactional(readOnly = true)
     public byte[] generateReceipt(UUID tradeId, UUID profileId) {
         Trade trade = findTradeForParticipant(tradeId, profileId);
-        requireAccepted(trade);
+        requireReceiptEligible(trade);
 
         String html = buildHtmlReceipt(trade);
         return renderPdf(html);
     }
 
+    @Transactional
+    public TradeReceipt getOrCreateReceipt(UUID tradeId, UUID profileId) {
+        Trade trade = findTradeForParticipant(tradeId, profileId);
+        requireReceiptEligible(trade);
+
+        return tradeReceiptRepository
+                .findByTradeId(tradeId)
+                .map(receipt -> ensureReceiptIntegrity(receipt, trade))
+                .orElseGet(() -> createReceipt(trade));
+    }
+
     @Transactional(readOnly = true)
     public void sendReceiptByEmail(UUID tradeId, UUID profileId) {
         Trade trade = findTradeForParticipant(tradeId, profileId);
-        requireAccepted(trade);
+        requireReceiptEligible(trade);
 
         if (!mailSenderConfigured) {
             log.info(
@@ -119,11 +138,43 @@ public class ReceiptService {
                         });
     }
 
-    private void requireAccepted(Trade trade) {
-        if (trade.getStatus() != TradeStatus.ACCEPTED) {
+    private void requireReceiptEligible(Trade trade) {
+        TradeStatus status = trade.getStatus();
+        if (status != TradeStatus.ACCEPTED && status != TradeStatus.COMPLETED) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Only accepted trades have receipts available.");
+                    HttpStatus.BAD_REQUEST,
+                    "Only accepted or completed trades have receipts available.");
         }
+    }
+
+    private TradeReceipt ensureReceiptIntegrity(TradeReceipt receipt, Trade trade) {
+        if (receipt.getPdfContent() == null || receipt.getHash() == null) {
+            return createOrUpdateReceipt(receipt, trade);
+        }
+
+        String currentHash = hashPdf(receipt.getPdfContent());
+        if (!currentHash.equals(receipt.getHash())) {
+            return createOrUpdateReceipt(receipt, trade);
+        }
+        return receipt;
+    }
+
+    private TradeReceipt createReceipt(Trade trade) {
+        TradeReceipt receipt = new TradeReceipt();
+        receipt.setTrade(trade);
+        return createOrUpdateReceipt(receipt, trade);
+    }
+
+    private TradeReceipt createOrUpdateReceipt(TradeReceipt receipt, Trade trade) {
+        byte[] pdfBytes = renderPdf(buildHtmlReceipt(trade));
+        String pdfHash = hashPdf(pdfBytes);
+        String signature = signReceipt(trade, pdfHash);
+
+        receipt.setTrade(trade);
+        receipt.setPdfContent(pdfBytes);
+        receipt.setHash(pdfHash);
+        receipt.setSignature(signature);
+        return tradeReceiptRepository.save(receipt);
     }
 
     private String buildHtmlReceipt(Trade trade) {
@@ -161,7 +212,7 @@ public class ReceiptService {
                     .section h2 { font-size: 18px; margin-bottom: 12px; }
                     .participants { display: flex; gap: 16px; flex-wrap: wrap; }
                     .participant { flex: 1 1 240px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
-                    .items { width: 100%; border-collapse: collapse; }
+                    .items { width: 100%%; border-collapse: collapse; }
                     .items th, .items td { padding: 8px 12px; border: 1px solid #e5e7eb; text-align: left; }
                     .items th { background: #111827; color: #f9fafb; }
                     .footer { margin-top: 32px; font-size: 12px; color: #6b7280; text-align: center; }
@@ -303,5 +354,36 @@ public class ReceiptService {
             return StringUtils.hasText(impl.getHost());
         }
         return true;
+    }
+
+    private String hashPdf(byte[] pdfBytes) {
+        return digestToHex(pdfBytes);
+    }
+
+    private String signReceipt(Trade trade, String pdfHash) {
+        String ownerId = trade.getOwner() != null && trade.getOwner().getId() != null
+                ? trade.getOwner().getId().toString()
+                : "unknown";
+        String requesterId = trade.getRequester() != null && trade.getRequester().getId() != null
+                ? trade.getRequester().getId().toString()
+                : "unknown";
+        String payload = String.join(
+                "|",
+                trade.getId().toString(),
+                trade.getStatus().name(),
+                ownerId,
+                requesterId,
+                pdfHash);
+        return digestToHex(payload.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String digestToHex(byte[] input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashed = digest.digest(input);
+            return HexFormat.of().formatHex(hashed);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", ex);
+        }
     }
 }
