@@ -9,4 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> {
     @EntityGraph(attributePaths = "profile")
     Optional<UserAccount> findByEmailIgnoreCase(String email);
+
+    @EntityGraph(attributePaths = "profile")
+    Optional<UserAccount> findByProfileId(UUID profileId);
 }
