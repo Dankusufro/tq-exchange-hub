@@ -163,7 +163,7 @@ public class ReceiptService {
                     .section h2 { font-size: 18px; margin-bottom: 12px; }
                     .participants { display: flex; gap: 16px; flex-wrap: wrap; }
                     .participant { flex: 1 1 240px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
-                    .items { width: 100%; border-collapse: collapse; }
+                    .items { width: 100%%; border-collapse: collapse; }
                     .items th, .items td { padding: 8px 12px; border: 1px solid #e5e7eb; text-align: left; }
                     .items th { background: #111827; color: #f9fafb; }
                     .footer { margin-top: 32px; font-size: 12px; color: #6b7280; text-align: center; }
