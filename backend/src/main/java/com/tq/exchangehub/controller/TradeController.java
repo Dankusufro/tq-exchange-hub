@@ -1,10 +1,12 @@
 package com.tq.exchangehub.controller;
 
 import com.tq.exchangehub.dto.CreateTradeRequest;
+import com.tq.exchangehub.dto.ReceiptEmailRequest;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.dto.TradeStatusUpdateRequest;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.security.UserPrincipal;
+import com.tq.exchangehub.service.ReceiptService;
 import com.tq.exchangehub.service.TradeService;
 import jakarta.validation.Valid;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,7 +18,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,9 +38,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class TradeController {
 
     private final TradeService tradeService;
+    private final ReceiptService receiptService;
 
-    public TradeController(TradeService tradeService) {
+    public TradeController(TradeService tradeService, ReceiptService receiptService) {
         this.tradeService = tradeService;
+        this.receiptService = receiptService;
     }
 
     @Operation(

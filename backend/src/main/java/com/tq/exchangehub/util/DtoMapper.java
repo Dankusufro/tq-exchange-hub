@@ -1,6 +1,7 @@
 package com.tq.exchangehub.util;
 
 import com.tq.exchangehub.dto.CategoryDto;
+import com.tq.exchangehub.dto.FavoriteDto;
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.ItemSummaryDto;
 import com.tq.exchangehub.dto.MessageDto;
@@ -9,12 +10,15 @@ import com.tq.exchangehub.dto.ProfileDto;
 import com.tq.exchangehub.dto.ReviewDto;
 import com.tq.exchangehub.dto.TradeDto;
 import com.tq.exchangehub.entity.Category;
+import com.tq.exchangehub.entity.Favorite;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.Message;
 import com.tq.exchangehub.entity.Notification;
 import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Review;
 import com.tq.exchangehub.entity.Trade;
+import java.util.Collections;
+import java.util.List;
 
 public final class DtoMapper {
 
@@ -69,6 +73,25 @@ public final class DtoMapper {
         dto.setMainImageUrl(item.getImages().isEmpty() ? null : item.getImages().get(0));
         dto.setAvailable(item.getAvailable());
         dto.setService(item.getService());
+        return dto;
+    }
+
+    public static FavoriteDto toFavoriteDto(Favorite favorite) {
+        FavoriteDto dto = new FavoriteDto();
+        Item item = favorite.getItem();
+        Profile owner = item.getOwner();
+        dto.setId(item.getId());
+        dto.setOwnerId(owner.getId());
+        dto.setTitle(item.getTitle());
+        dto.setDescription(item.getDescription());
+        dto.setCondition(item.getCondition());
+        dto.setLocation(item.getLocation());
+        dto.setCategory(item.getCategory().getName());
+        dto.setUserName(owner.getDisplayName());
+        dto.setUserRating(owner.getRating() != null ? owner.getRating() : 0.0);
+        dto.setImage(item.getImages().isEmpty() ? null : item.getImages().get(0));
+        List<String> wishlist = item.getWishlist();
+        dto.setLookingFor(wishlist == null || wishlist.isEmpty() ? Collections.emptyList() : List.copyOf(wishlist));
         return dto;
     }
 
