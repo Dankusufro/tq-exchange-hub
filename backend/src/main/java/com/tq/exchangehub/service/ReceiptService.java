@@ -58,7 +58,7 @@ public class ReceiptService {
     @Transactional(readOnly = true)
     public byte[] generateReceipt(UUID tradeId, UUID profileId) {
         Trade trade = findTradeForParticipant(tradeId, profileId);
-        requireAccepted(trade);
+        requireReceiptEligible(trade);
 
         String html = buildHtmlReceipt(trade);
         return renderPdf(html);
@@ -67,7 +67,7 @@ public class ReceiptService {
     @Transactional(readOnly = true)
     public void sendReceiptByEmail(UUID tradeId, UUID profileId) {
         Trade trade = findTradeForParticipant(tradeId, profileId);
-        requireAccepted(trade);
+        requireReceiptEligible(trade);
 
         if (!mailSenderConfigured) {
             log.info(
@@ -119,10 +119,12 @@ public class ReceiptService {
                         });
     }
 
-    private void requireAccepted(Trade trade) {
-        if (trade.getStatus() != TradeStatus.ACCEPTED) {
+    private void requireReceiptEligible(Trade trade) {
+        TradeStatus status = trade.getStatus();
+        if (status != TradeStatus.ACCEPTED && status != TradeStatus.COMPLETED) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST, "Only accepted trades have receipts available.");
+                    HttpStatus.BAD_REQUEST,
+                    "Only accepted or completed trades have receipts available.");
         }
     }
 
