@@ -1,9 +1,5 @@
 package com.tq.exchangehub.security;
 
-import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Bucket4j;
-import io.github.bucket4j.ConsumptionProbe;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
@@ -12,6 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.logstash.logback.argument.StructuredArguments;
@@ -37,7 +34,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final long RATE_LIMIT_CAPACITY = 100;
     private static final Duration REFILL_PERIOD = Duration.ofMinutes(1);
 
-    private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
+    private final Map<String, SimpleTokenBucket> buckets = new ConcurrentHashMap<>();
     private final AntPathMatcher matcher = new AntPathMatcher();
     private final Counter allowedRequests;
     private final Counter limitedRequests;
@@ -70,12 +67,12 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String clientKey = resolveClientKey(request);
-        Bucket bucket = buckets.computeIfAbsent(clientKey, key -> newBucket());
+        SimpleTokenBucket bucket = buckets.computeIfAbsent(clientKey, key -> new SimpleTokenBucket());
 
-        ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
-        if (!probe.isConsumed()) {
+        RateLimitProbe probe = bucket.tryConsume();
+        if (!probe.consumed()) {
             limitedRequests.increment();
-            long waitForRefillNs = probe.getNanosToWaitForRefill();
+            long waitForRefillNs = probe.nanosToWaitForRefill();
             long retryAfterSeconds = (long) Math.ceil(waitForRefillNs / 1_000_000_000.0);
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.setHeader("Retry-After", String.valueOf(Math.max(retryAfterSeconds, 1)));
@@ -87,16 +84,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
 
         allowedRequests.increment();
-        response.setHeader("X-Rate-Limit-Remaining", String.valueOf(probe.getRemainingTokens()));
+        response.setHeader("X-Rate-Limit-Remaining", String.valueOf(probe.remainingTokens()));
         filterChain.doFilter(request, response);
-    }
-
-    private Bucket newBucket() {
-        Bandwidth limit = Bandwidth.builder()
-                .capacity(RATE_LIMIT_CAPACITY)
-                .refillIntervally(RATE_LIMIT_CAPACITY, REFILL_PERIOD)
-                .build();
-        return Bucket4j.builder().addLimit(limit).build();
     }
 
     private String resolveClientKey(HttpServletRequest request) {
@@ -105,5 +94,49 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return forwardedFor.split(",")[0].trim();
         }
         return request.getRemoteAddr();
+    }
+
+    private static final class SimpleTokenBucket {
+
+        private long availableTokens = RATE_LIMIT_CAPACITY;
+        private Instant lastRefill = Instant.now();
+
+        synchronized RateLimitProbe tryConsume() {
+            refillIfNeeded();
+            if (availableTokens > 0) {
+                availableTokens--;
+                return new RateLimitProbe(true, availableTokens, 0L);
+            }
+            long nanosToWait = nanosUntilNextRefill();
+            return new RateLimitProbe(false, availableTokens, nanosToWait);
+        }
+
+        private void refillIfNeeded() {
+            Instant now = Instant.now();
+            if (!now.isAfter(lastRefill)) {
+                return;
+            }
+            long periodNanos = REFILL_PERIOD.toNanos();
+            long elapsedNanos = Duration.between(lastRefill, now).toNanos();
+            long periods = elapsedNanos / periodNanos;
+            if (periods <= 0) {
+                return;
+            }
+            long tokensToAdd = periods * RATE_LIMIT_CAPACITY;
+            availableTokens = Math.min(RATE_LIMIT_CAPACITY, availableTokens + tokensToAdd);
+            lastRefill = lastRefill.plus(REFILL_PERIOD.multipliedBy(periods));
+        }
+
+        private long nanosUntilNextRefill() {
+            Instant now = Instant.now();
+            Instant nextRefill = lastRefill.plus(REFILL_PERIOD);
+            if (!nextRefill.isAfter(now)) {
+                return 0L;
+            }
+            return Duration.between(now, nextRefill).toNanos();
+        }
+    }
+
+    private record RateLimitProbe(boolean consumed, long remainingTokens, long nanosToWaitForRefill) {
     }
 }
