@@ -1,0 +1,21 @@
+groups:
+  - name: exchange-hub-rnf
+    rules:
+      - alert: RNF1LatencyDegradation
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri!~"/actuator.*"}[5m])) by (le)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          requirement: RNF1
+        annotations:
+          summary: "RNF1: Latency degradation detected"
+          description: "P95 latency has been above 500ms for 5 minutes, breaching the RNF1 response time objective."
+      - alert: RNF3AvailabilityDrop
+        expr: (1 - sum(rate(http_server_requests_seconds_count{outcome="SUCCESS",uri!~"/actuator.*"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[5m])), 1)) > 0.005
+        for: 10m
+        labels:
+          severity: critical
+          requirement: RNF3
+        annotations:
+          summary: "RNF3: Availability below 99.5%"
+          description: "Error rate exceeded 0.5% over the last 10 minutes, breaching the RNF3 availability requirement."
