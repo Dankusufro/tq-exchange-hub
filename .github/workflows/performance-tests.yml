@@ -1,0 +1,60 @@
+name: Performance Tests
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  k6-load-test:
+    runs-on: ubuntu-latest
+    env:
+      PERF_TEST_BASE_URL: ${{ vars.PERF_TEST_BASE_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Report missing base URL
+        if: env.PERF_TEST_BASE_URL == ''
+        run: |
+          echo "### Performance tests skipped" >> $GITHUB_STEP_SUMMARY
+          echo "Configure the PERF_TEST_BASE_URL repository variable to enable automated load testing." >> $GITHUB_STEP_SUMMARY
+
+      - name: Set up k6
+        if: env.PERF_TEST_BASE_URL != ''
+        uses: grafana/setup-k6-action@v1
+
+      - name: Run k6 load tests
+        if: env.PERF_TEST_BASE_URL != ''
+        env:
+          BASE_URL: ${{ env.PERF_TEST_BASE_URL }}
+        run: |
+          k6 run backend/performance/health-check.js --summary-export k6-summary.json
+
+      - name: Generate markdown summary
+        if: env.PERF_TEST_BASE_URL != ''
+        run: |
+          jq -r '
+            def safe_metric(path; default):
+              if getpath(path) == null then default else getpath(path) end;
+            def row($name; $value): "| \($name) | \($value) |";
+            (
+              "| Metric | Value |",
+              "|---|---|",
+              row("Requests", safe_metric(["metrics","http_reqs","count"], 0)),
+              row("Avg duration (ms)", (safe_metric(["metrics","http_req_duration","avg"], 0) | tostring)),
+              row("P95 duration (ms)", (safe_metric(["metrics","http_req_duration","p(95)"], 0) | tostring)),
+              row("Failures (%)", ((safe_metric(["metrics","http_req_failed","rate"], 0) * 100) | tostring))
+            )
+          ' k6-summary.json > performance-summary.md
+          echo "### k6 performance summary" >> $GITHUB_STEP_SUMMARY
+          cat performance-summary.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload k6 artifacts
+        if: env.PERF_TEST_BASE_URL != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results
+          path: |
+            k6-summary.json
+            performance-summary.md

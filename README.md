@@ -70,3 +70,63 @@ Services are exposed at:
 - Backend API: http://localhost:8080
 
 The compose stack sets `VITE_API_BASE_URL` so the browser talks to the backend through the same origin that is published to the host machine.
+
+### Observability and alerting
+
+The backend now ships with Spring Boot Actuator and a Prometheus registry. Metrics are exposed at
+`/actuator/prometheus` and the `/api/health` endpoint delegates to the Actuator health checks so the probes reflect the current
+application state.
+
+- Prometheus scrape and alert configuration lives under [`monitoring/prometheus`](monitoring/prometheus).
+- Grafana provisioning (data source and dashboards) lives under [`monitoring/grafana`](monitoring/grafana).
+
+To spin up Prometheus and Grafana locally you can extend the root `docker-compose.yml` with the monitoring services:
+
+```yaml
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - '9090:9090'
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - '3000:3000'
+```
+
+#### RNF alert thresholds
+
+- **RNF1 (Performance):** `histogram_quantile(0.95, http_server_requests_seconds_bucket)` must stay below **0.5 seconds**. The
+  `RNF1LatencyDegradation` alert fires after five minutes above the limit.
+- **RNF3 (Availability):** Successful request ratio must stay above **99.5%**. The `RNF3AvailabilityDrop` alert fires after
+  ten minutes with an error rate above 0.5%.
+
+When an alert fires, acknowledge it in your alerting tool and:
+
+1. Inspect the **Exchange Hub Service Overview** Grafana dashboard (provisioned automatically from
+   [`monitoring/grafana/provisioning/dashboards/exchange-hub-dashboard.json`](monitoring/grafana/provisioning/dashboards/exchange-hub-dashboard.json)).
+2. Correlate spikes in latency or error rate with rate limiter activity and application logs (now structured JSON) to identify
+   offending clients or endpoints.
+3. If RNF3 is breached, evaluate upstream dependencies (database, third-party APIs) and consider temporarily reducing allowed
+   throughput via the rate limiter to preserve the error budget.
+
+### Automated load testing
+
+The GitHub Actions workflow [`performance-tests.yml`](.github/workflows/performance-tests.yml) runs a k6 scenario against the
+`/api/health` probe and publishes a Markdown summary and JSON results as build artifacts. Configure the
+`PERF_TEST_BASE_URL` repository variable with the publicly reachable backend URL to enable the job. To reproduce the test
+locally run:
+
+```bash
+cd backend
+k6 run performance/health-check.js --summary-export k6-summary.json
+```
