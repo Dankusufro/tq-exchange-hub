@@ -1,9 +1,9 @@
 package com.tq.exchangehub.security;
 
-import com.bucket4j.Bandwidth;
-import com.bucket4j.Bucket;
-import com.bucket4j.Bucket4j;
-import com.bucket4j.ConsumptionProbe;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.Bucket4j;
+import io.github.bucket4j.ConsumptionProbe;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
