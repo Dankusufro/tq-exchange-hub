@@ -22,7 +22,27 @@ const deriveApiBaseUrl = () => {
   return "http://localhost:8080";
 };
 
-const API_BASE_URL = deriveApiBaseUrl();
+export const API_BASE_URL = deriveApiBaseUrl();
+
+export const buildWebSocketUrl = (path: string) => {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+
+  try {
+    const baseUrl = new URL(API_BASE_URL);
+    const protocol = baseUrl.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${baseUrl.host}${normalizedPath}`;
+  } catch (error) {
+    if (API_BASE_URL.startsWith("https://")) {
+      return `wss://${API_BASE_URL.replace(/^https:\/\//, "")}${normalizedPath}`;
+    }
+
+    if (API_BASE_URL.startsWith("http://")) {
+      return `ws://${API_BASE_URL.replace(/^http:\/\//, "")}${normalizedPath}`;
+    }
+
+    return normalizedPath;
+  }
+};
 
 export type AuthTokens = {
   accessToken: string;

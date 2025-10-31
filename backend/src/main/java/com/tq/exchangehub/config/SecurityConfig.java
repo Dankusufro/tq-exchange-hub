@@ -42,7 +42,9 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password",
                                 "/api/auth/reset-password",
                                 "/api/health",
-                                "/h2-console/**")
+                                "/h2-console/**",
+                                "/ws",
+                                "/ws/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/categories/**",

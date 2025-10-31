@@ -8,6 +8,7 @@ import com.tq.exchangehub.entity.Message;
 import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
+import com.tq.exchangehub.event.TradeStatusChangedEvent;
 import com.tq.exchangehub.repository.ItemRepository;
 import com.tq.exchangehub.repository.MessageRepository;
 import com.tq.exchangehub.repository.ProfileRepository;
@@ -19,7 +20,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -30,16 +34,25 @@ public class TradeService {
     private final ItemRepository itemRepository;
     private final ProfileRepository profileRepository;
     private final MessageRepository messageRepository;
+    private final ApplicationEventPublisher eventPublisher;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final NotificationService notificationService;
 
     public TradeService(
             TradeRepository tradeRepository,
             ItemRepository itemRepository,
             ProfileRepository profileRepository,
-            MessageRepository messageRepository) {
+            MessageRepository messageRepository,
+            ApplicationEventPublisher eventPublisher,
+            SimpMessagingTemplate messagingTemplate,
+            NotificationService notificationService) {
         this.tradeRepository = tradeRepository;
         this.itemRepository = itemRepository;
         this.profileRepository = profileRepository;
         this.messageRepository = messageRepository;
+        this.eventPublisher = eventPublisher;
+        this.messagingTemplate = messagingTemplate;
+        this.notificationService = notificationService;
     }
 
     public List<TradeDto> listTrades(UUID profileId, List<TradeStatus> statuses) {
@@ -74,16 +87,36 @@ public class TradeService {
                         .findById(id)
                         .orElseThrow(() -> new IllegalArgumentException("Trade not found"));
 
+        TradeStatus requestedStatus = request.getStatus();
+
+        if (requestedStatus == TradeStatus.CANCELLED) {
+            return cancelTrade(trade, profileId);
+        }
+
         if (!trade.getOwner().getId().equals(profileId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "You do not have permission to modify this trade request.");
         }
 
-        trade.setStatus(request.getStatus());
-        trade.setUpdatedAt(OffsetDateTime.now());
-        Trade saved = tradeRepository.save(trade);
-        return DtoMapper.toTradeDto(saved);
+        if (trade.getStatus() != TradeStatus.PENDING
+                && (requestedStatus == TradeStatus.ACCEPTED
+                        || requestedStatus == TradeStatus.REJECTED)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only pending trades can be accepted or rejected.");
+        }
+
+        return applyStatus(trade, requestedStatus, profileId);
+    }
+
+    public TradeDto cancel(UUID id, UUID profileId) {
+        Trade trade =
+                tradeRepository
+                        .findById(id)
+                        .orElseThrow(() -> new IllegalArgumentException("Trade not found"));
+
+        return cancelTrade(trade, profileId);
     }
 
     public TradeDto create(CreateTradeRequest request, UUID requesterProfileId) {
@@ -137,10 +170,23 @@ public class TradeService {
             message.setSender(requester);
             message.setContent(request.getMessage());
             message.setCreatedAt(OffsetDateTime.now());
-            messageRepository.save(message);
+            Message initialMessage = messageRepository.save(message);
+            messagingTemplate.convertAndSend(
+                    "/topic/trades/" + saved.getId() + "/messages",
+                    DtoMapper.toMessageDto(initialMessage));
+            notificationService.notifyMessage(owner, initialMessage);
         }
 
         return DtoMapper.toTradeDto(saved);
+    }
+
+    @EventListener
+    public void handleTradeStatusChange(TradeStatusChangedEvent event) {
+        Trade trade = event.getTrade();
+        messagingTemplate.convertAndSend(
+                "/topic/trades/" + trade.getId() + "/status",
+                DtoMapper.toTradeDto(trade));
+        notificationService.notifyTradeStatusChange(trade, event.getActorProfileId());
     }
 
     private List<TradeStatus> normalizeStatuses(List<TradeStatus> statuses) {
@@ -149,5 +195,29 @@ public class TradeService {
         }
 
         return new ArrayList<>(new LinkedHashSet<>(statuses));
+    }
+
+    private TradeDto cancelTrade(Trade trade, UUID profileId) {
+        if (!trade.getRequester().getId().equals(profileId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Only the requester can cancel this trade.");
+        }
+
+        if (trade.getStatus() != TradeStatus.PENDING) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only pending trades can be cancelled.");
+        }
+
+        return applyStatus(trade, TradeStatus.CANCELLED, profileId);
+    }
+
+    private TradeDto applyStatus(Trade trade, TradeStatus status, UUID actorProfileId) {
+        trade.setStatus(status);
+        trade.setUpdatedAt(OffsetDateTime.now());
+        Trade saved = tradeRepository.save(trade);
+        eventPublisher.publishEvent(new TradeStatusChangedEvent(saved, actorProfileId));
+        return DtoMapper.toTradeDto(saved);
     }
 }

@@ -13,11 +13,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useNotifications, type Notification, type NotificationCategory } from "@/hooks/use-notifications";
+import {
+  useNotifications,
+  type Notification,
+  type NotificationCategory,
+} from "@/hooks/use-notifications";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -48,13 +54,26 @@ const notificationTypeColors: Record<NotificationCategory, string> = {
   alert: "text-amber-500",
 };
 
+const formatNotificationTime = (value: string | null | undefined) => {
+  if (!value) {
+    return "Hace un momento";
+  }
+
+  try {
+    return formatDistanceToNow(new Date(value), { addSuffix: true, locale: es });
+  } catch (error) {
+    console.error("Failed to format notification timestamp", error);
+    return "Hace un momento";
+  }
+};
+
 interface NotificationListProps {
   title: string;
   emptyMessage: string;
   notifications: Notification[];
   unreadCount: number;
-  onMarkAllAsRead: () => void;
-  onNotificationClick: (id: string) => void;
+  onMarkAllAsRead: () => Promise<void>;
+  onNotificationClick: (id: string) => Promise<void>;
   viewAllLabel?: string;
 }
 
@@ -76,7 +95,14 @@ const NotificationList = ({
         </p>
       </div>
       {unreadCount > 0 && (
-        <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onMarkAllAsRead}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 px-2 text-xs"
+          onClick={() => {
+            void onMarkAllAsRead();
+          }}
+        >
           Marcar todo
         </Button>
       )}
@@ -96,7 +122,9 @@ const NotificationList = ({
                   "flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 focus:outline-none focus:bg-muted/60",
                   !notification.read && "bg-muted/40"
                 )}
-                onClick={() => onNotificationClick(notification.id)}
+                onClick={() => {
+                  void onNotificationClick(notification.id);
+                }}
               >
                 <div className="mt-1">
                   <Icon className={cn("h-5 w-5", notificationTypeColors[notification.category])} />
@@ -105,7 +133,7 @@ const NotificationList = ({
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-foreground">{notification.title}</p>
                   <p className="text-xs leading-snug text-muted-foreground">{notification.description}</p>
-                  <p className="text-xs text-muted-foreground">{notification.time}</p>
+                  <p className="text-xs text-muted-foreground">{formatNotificationTime(notification.createdAt)}</p>
                 </div>
 
                 {!notification.read && <span className="ml-auto mt-1 h-2 w-2 rounded-full bg-primary" />}

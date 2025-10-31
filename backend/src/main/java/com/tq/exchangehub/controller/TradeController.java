@@ -158,6 +158,23 @@ public class TradeController {
         return ResponseEntity.ok(tradeService.updateStatus(id, request, profileId));
     }
 
+    @Operation(
+            summary = "Cancel a trade",
+            description = "Convenience endpoint that sets the trade status to CANCELLED.",
+            security = {@SecurityRequirement(name = "bearerAuth")})
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Trade cancelled successfully."),
+        @ApiResponse(responseCode = "401", description = "Authentication required."),
+        @ApiResponse(responseCode = "403", description = "The authenticated user cannot cancel this trade."),
+        @ApiResponse(responseCode = "404", description = "Trade not found.")
+    })
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<TradeDto> cancel(
+            @AuthenticationPrincipal UserPrincipal principal, @PathVariable UUID id) {
+        UUID profileId = extractProfileId(principal);
+        return ResponseEntity.ok(tradeService.cancel(id, profileId));
+    }
+
     private UUID extractProfileId(UserPrincipal principal) {
         if (principal == null || principal.getUserAccount() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication required");
