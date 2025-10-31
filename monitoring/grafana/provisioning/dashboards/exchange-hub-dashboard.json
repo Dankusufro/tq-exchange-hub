@@ -1,0 +1,95 @@
+{
+  "id": null,
+  "uid": "exchange-hub",
+  "title": "Exchange Hub Service Overview",
+  "tags": ["exchange-hub", "observability"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Request Rate",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[1m]))",
+          "legendFormat": "All requests"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\",outcome=\"SUCCESS\"}[1m]))",
+          "legendFormat": "Successful"
+        },
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\",outcome!=\"SUCCESS\"}[1m]))",
+          "legendFormat": "Errors"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency P95 (RNF1)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.4 },
+              { "color": "red", "value": 0.5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{uri!~\"/actuator.*\"}[5m])) by (le))",
+          "legendFormat": "P95 latency"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Rate Limiter Outcomes",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(security_rate_limiting_requests_total{outcome=\"allowed\"}[5m]))",
+          "legendFormat": "Allowed"
+        },
+        {
+          "expr": "sum(increase(security_rate_limiting_requests_total{outcome=\"limited\"}[5m]))",
+          "legendFormat": "Limited"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Error Budget (RNF3)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "red", "value": 0.5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "(1 - sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\",outcome=\"SUCCESS\"}[5m])) / clamp_min(sum(rate(http_server_requests_seconds_count{uri!~\"/actuator.*\"}[5m])), 1)) * 100",
+          "legendFormat": "Error rate"
+        }
+      ]
+    }
+  ]
+}
