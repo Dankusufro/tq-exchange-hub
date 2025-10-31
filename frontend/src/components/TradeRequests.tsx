@@ -2,10 +2,9 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { Check, Clock, X, LogIn, Ban } from "lucide-react";
+import { Check, Clock, X, LogIn, Ban, Download, Mail } from "lucide-react";
 
-import useTradeRequests from "@/hooks/use-trade-requests";
-import TradeReceiptActions from "@/components/trade/TradeReceiptActions";
+import useTradeRequests, { type TradeRequest } from "@/hooks/use-trade-requests";
 import { useAuth } from "@/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,10 +29,13 @@ const TradeRequests = () => {
     acceptRequest,
     rejectRequest,
     cancelRequest,
+    downloadReceipt,
+    sendReceiptByEmail,
   } = useTradeRequests({
     status: ["pending", "accepted", "rejected", "cancelled"],
   });
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [receiptActionId, setReceiptActionId] = useState<string | null>(null);
 
   const sortedRequests = useMemo(
     () =>
@@ -98,6 +100,56 @@ const TradeRequests = () => {
       });
     } finally {
       setSelectedRequestId(null);
+    }
+  };
+
+  const handleDownloadReceipt = async (request: TradeRequest) => {
+    try {
+      const blob = await downloadReceipt(request.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const shortId = request.id.slice(0, 8);
+      link.download = `comprobante-trueque-${shortId}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast({
+        title: "Comprobante descargado",
+        description: "Se generó el comprobante en PDF para este trueque.",
+      });
+    } catch (error) {
+      const description =
+        error instanceof Error ? error.message : "No pudimos generar el comprobante en este momento.";
+      toast({
+        title: "Error al generar comprobante",
+        description,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendReceipt = async (id: string) => {
+    try {
+      setReceiptActionId(id);
+      await sendReceiptByEmail(id);
+      toast({
+        title: "Comprobante enviado",
+        description: "Hemos enviado el comprobante por correo a los participantes del trueque.",
+      });
+    } catch (error) {
+      const description =
+        error instanceof Error
+          ? error.message
+          : "No pudimos enviar el comprobante por correo electrónico.";
+      toast({
+        title: "Error al enviar comprobante",
+        description,
+        variant: "destructive",
+      });
+    } finally {
+      setReceiptActionId(null);
     }
   };
 
@@ -176,6 +228,7 @@ const TradeRequests = () => {
           const isOwner = request.owner_id === user.id;
           const isRequester = request.requester_id === user.id;
           const isPending = request.status === "pending";
+          const isAccepted = request.status === "accepted";
 
           return (
             <div key={request.id} className="space-y-3">
@@ -194,7 +247,7 @@ const TradeRequests = () => {
                     Recibida {formatDistanceToNow(new Date(request.created_at), { addSuffix: true, locale: es })}
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {isOwner && isPending && (
                     <>
                       <Button
@@ -229,6 +282,29 @@ const TradeRequests = () => {
                       <Ban className="h-4 w-4" />
                       Cancelar
                     </Button>
+                  )}
+                  {isAccepted && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleDownloadReceipt(request)}
+                        className="gap-2"
+                      >
+                        <Download className="h-4 w-4" />
+                        Descargar comprobante
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleSendReceipt(request.id)}
+                        disabled={receiptActionId === request.id}
+                        className="gap-2"
+                      >
+                        <Mail className="h-4 w-4" />
+                        Enviar por correo
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>

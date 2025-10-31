@@ -204,18 +204,18 @@ export class APIClient {
       return undefined as T;
     }
 
-    const normalizedType = responseType ?? (isJsonContent(response) ? "json" : "text");
+    const resolvedResponseType = responseType ?? (isJsonContent(response) ? "json" : "text");
 
-    switch (normalizedType) {
+    switch (resolvedResponseType) {
+      case "json":
+        return (await response.json()) as T;
       case "blob":
         return (await response.blob()) as T;
       case "arrayBuffer":
         return (await response.arrayBuffer()) as T;
       case "text":
-        return (await response.text()) as T;
-      case "json":
       default:
-        return (await response.json()) as T;
+        return (await response.text()) as T;
     }
   }
 

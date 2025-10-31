@@ -43,6 +43,8 @@ interface UseTradeRequestsResult {
   acceptRequest: (id: string) => Promise<void>;
   rejectRequest: (id: string) => Promise<void>;
   cancelRequest: (id: string) => Promise<void>;
+  downloadReceipt: (id: string) => Promise<Blob>;
+  sendReceiptByEmail: (id: string) => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -208,6 +210,36 @@ const useTradeRequests = (options?: UseTradeRequestsOptions): UseTradeRequestsRe
     [cancelMutation],
   );
 
+  const downloadReceipt = useCallback<UseTradeRequestsResult["downloadReceipt"]>(
+    async (id) => {
+      try {
+        return await apiClient.get<Blob>(`/api/trades/${id}/receipt`, {
+          responseType: "blob",
+          headers: { Accept: "application/pdf" },
+        });
+      } catch (error) {
+        await handleRequestError(error, "No se pudo generar el comprobante");
+      }
+
+      throw new Error("No se pudo generar el comprobante");
+    },
+    [handleRequestError],
+  );
+
+  const sendReceiptByEmail = useCallback<UseTradeRequestsResult["sendReceiptByEmail"]>(
+    async (id) => {
+      try {
+        await apiClient.post<void>(`/api/trades/${id}/receipt/email`);
+        return;
+      } catch (error) {
+        await handleRequestError(error, "No se pudo enviar el comprobante por correo");
+      }
+
+      throw new Error("No se pudo enviar el comprobante por correo");
+    },
+    [handleRequestError],
+  );
+
   const refresh = useCallback(async () => {
     if (!session) {
       return;
@@ -226,6 +258,8 @@ const useTradeRequests = (options?: UseTradeRequestsOptions): UseTradeRequestsRe
     acceptRequest,
     rejectRequest,
     cancelRequest,
+    downloadReceipt,
+    sendReceiptByEmail,
     refresh,
   };
 };
