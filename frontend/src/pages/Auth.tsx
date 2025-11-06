@@ -12,8 +12,8 @@ type NotifiableError = Error & { status?: number; alreadyNotified?: boolean };
 
 const Auth = () => {
   const navigate = useNavigate();
-  // @ts-ignore
-    const location = useLocation<{ from?: string }>();
+  // @ts-expect-error React Router does not expose a typed location state helper for this case
+  const location = useLocation<{ from?: string }>();
   const { signIn, signUp, requestPasswordReset, resetPassword } = useAuth();
   const { toast } = useToast();
 
