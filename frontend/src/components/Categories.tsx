@@ -1,30 +1,8 @@
-import {
-  ArrowRight,
-  BookOpen,
-  Car,
-  Dumbbell,
-  Home,
-  Palette,
-  Shirt,
-  Smartphone,
-  Tag,
-  Wrench,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useCategories } from "@/hooks/use-categories";
-
-const iconMap: Record<string, LucideIcon> = {
-  "lucide:book-open": BookOpen,
-  "lucide:shirt": Shirt,
-  "lucide:smartphone": Smartphone,
-  "lucide:home": Home,
-  "lucide:car": Car,
-  "lucide:palette": Palette,
-  "lucide:dumbbell": Dumbbell,
-  "lucide:wrench": Wrench,
-};
+import { getCategoryIcon } from "@/lib/category-icons";
 
 const formatCount = (value: number) => new Intl.NumberFormat("es-MX").format(value);
 
@@ -57,7 +35,7 @@ const Categories = () => {
     }
 
     return categories.map((category) => {
-      const Icon = category.icon ? iconMap[category.icon] ?? Tag : Tag;
+      const Icon = getCategoryIcon(category.icon);
       return (
         <Button
           key={category.id}
