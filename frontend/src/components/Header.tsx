@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -21,6 +20,7 @@ import {
 import { useFavorites } from "@/hooks/use-favorites";
 import { useAuth } from "@/providers/AuthProvider";
 import { cn } from "@/lib/utils";
+import SearchBar from "@/components/SearchBar";
 import { Link, useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -34,7 +34,6 @@ import {
   Menu,
   MessageCircle,
   Plus,
-  Search,
   User,
   Star,
   TrendingUp,
@@ -249,15 +248,10 @@ const Header = () => {
           </div>
 
           {/* Search bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar productos o servicios..."
-                className="pl-10 h-10"
-              />
-            </div>
-          </div>
+          <SearchBar
+            className="hidden md:flex flex-1 max-w-md mx-8"
+            placeholder="Buscar productos o servicios..."
+          />
 
           {/* Navigation */}
           <div className="flex items-center gap-2">
@@ -407,13 +401,7 @@ const Header = () => {
 
         {/* Mobile search */}
         <div className="pb-4 md:hidden">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar productos o servicios..."
-              className="pl-10 h-10"
-            />
-          </div>
+          <SearchBar placeholder="Buscar productos o servicios..." />
         </div>
       </div>
     </header>
