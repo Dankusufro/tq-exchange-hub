@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import heroImage from "@/assets/hero-barter.jpg";
+import SearchBar from "@/components/SearchBar";
 
 const Hero = () => {
   return (
@@ -19,19 +19,22 @@ const Hero = () => {
             </p>
           </div>
           
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
-              <Input 
-                placeholder="¿Qué buscas intercambiar?"
-                className="pl-12 bg-white/90 border-white/20 text-foreground placeholder:text-muted-foreground h-12"
-              />
-            </div>
-            <Button size="lg" className="bg-white text-primary hover:bg-white/90 h-12 px-6">
-              Buscar
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+          <SearchBar
+            className="max-w-md gap-4"
+            placeholder="¿Qué buscas intercambiar?"
+            inputClassName="h-12 bg-white/90 border-white/20 text-foreground placeholder:text-muted-foreground pl-12"
+            iconClassName="left-4 top-1/2 h-5 w-5"
+            actionSlot={
+              <Button
+                type="submit"
+                size="lg"
+                className="bg-white text-primary hover:bg-white/90 h-12 px-6"
+              >
+                Buscar
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            }
+          />
 
           <div className="flex flex-wrap gap-6 text-white/80">
             <div className="text-center">
