@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -18,11 +18,13 @@ import {
 import { useSearch } from "@/hooks/use-search";
 import type { CategorySummary } from "@/hooks/use-categories";
 import heroImage from "@/assets/hero-barter.jpg";
+import { ArrowLeft } from "lucide-react";
 
 const ITEMS_PER_PAGE = 9;
 const MIN_QUERY_LENGTH = 2;
 
 const Search = () => {
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const query = params.get("q") ?? "";
   const categoryId = params.get("categoryId");
@@ -108,6 +110,18 @@ const Search = () => {
       <main className="flex-1">
         <section className="border-b bg-muted/40">
           <div className="container mx-auto px-4 py-8 space-y-6">
+            <div>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-9 gap-2 px-2 text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => navigate(-1)}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Volver
+              </Button>
+            </div>
+
             <div className="space-y-2">
               <h1 className="text-3xl font-bold text-foreground">Resultados de búsqueda</h1>
               <p className="text-muted-foreground">
@@ -119,6 +133,7 @@ const Search = () => {
               className="max-w-2xl"
               placeholder="Buscar productos o servicios..."
               defaultValue={query}
+              syncWithUrl
             />
 
             <div className="flex flex-wrap gap-2">

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Loader2, MapPin, Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ interface SearchBarProps {
   defaultValue?: string;
   minQueryLength?: number;
   actionSlot?: ReactNode;
+  syncWithUrl?: boolean;
 }
 
 const formatCount = (value: number) => new Intl.NumberFormat("es-MX").format(value);
@@ -31,8 +32,10 @@ const SearchBar = ({
   defaultValue = "",
   minQueryLength = 2,
   actionSlot,
+  syncWithUrl = false,
 }: SearchBarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const formRef = useRef<HTMLFormElement>(null);
   const [query, setQuery] = useState(defaultValue);
   const [isFocused, setIsFocused] = useState(false);
@@ -41,9 +44,23 @@ const SearchBar = ({
   const [debouncedQuery, setDebouncedQuery] = useState(trimmedQuery);
 
   useEffect(() => {
-    setQuery(defaultValue);
-    setDebouncedQuery(defaultValue.trim());
-  }, [defaultValue]);
+    const nextValue = (() => {
+      if (!syncWithUrl) {
+        return defaultValue;
+      }
+
+      try {
+        const params = new URLSearchParams(location.search);
+        return params.get("q") ?? defaultValue;
+      } catch (error) {
+        console.error("Failed to read search params", error);
+        return defaultValue;
+      }
+    })();
+
+    setQuery(nextValue);
+    setDebouncedQuery(nextValue.trim());
+  }, [defaultValue, location.search, syncWithUrl]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -89,17 +106,17 @@ const SearchBar = ({
 
       if (normalized) {
         params.set("q", normalized);
-    }
+      }
 
-    params.set("page", "0");
+      params.set("page", "0");
 
-    if (extraParams) {
-      Object.entries(extraParams).forEach(([key, value]) => {
-        if (value) {
-          params.set(key, value);
-        }
-      });
-    }
+      if (extraParams) {
+        Object.entries(extraParams).forEach(([key, value]) => {
+          if (value) {
+            params.set(key, value);
+          }
+        });
+      }
 
       navigate(`/search?${params.toString()}`);
       setIsFocused(false);

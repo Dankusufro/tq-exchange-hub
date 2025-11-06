@@ -251,6 +251,7 @@ const Header = () => {
           <SearchBar
             className="hidden md:flex flex-1 max-w-md mx-8"
             placeholder="Buscar productos o servicios..."
+            syncWithUrl
           />
 
           {/* Navigation */}
@@ -401,7 +402,7 @@ const Header = () => {
 
         {/* Mobile search */}
         <div className="pb-4 md:hidden">
-          <SearchBar placeholder="Buscar productos o servicios..." />
+          <SearchBar placeholder="Buscar productos o servicios..." syncWithUrl />
         </div>
       </div>
     </header>
