@@ -7,6 +7,8 @@ import com.tq.exchangehub.repository.ItemRepository;
 import com.tq.exchangehub.util.DtoMapper;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -29,5 +31,23 @@ public class CategoryService {
     public CategoryDto create(Category category) {
         Category saved = categoryRepository.save(category);
         return DtoMapper.toCategoryDto(saved);
+    }
+
+    public List<CategoryDto> search(String query, int limit) {
+        String normalizedQuery = query == null ? "" : query.trim();
+
+        if (normalizedQuery.isEmpty()) {
+            return List.of();
+        }
+
+        int resolvedLimit = Math.max(limit, 1);
+        Pageable pageable = PageRequest.of(0, resolvedLimit);
+
+        return categoryRepository
+                .findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(
+                        normalizedQuery, normalizedQuery, pageable)
+                .stream()
+                .map(category -> DtoMapper.toCategoryDto(category, itemRepository.countByCategory(category)))
+                .collect(Collectors.toList());
     }
 }

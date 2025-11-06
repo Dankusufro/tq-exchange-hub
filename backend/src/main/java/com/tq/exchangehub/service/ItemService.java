@@ -96,4 +96,21 @@ public class ItemService {
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt"));
         return itemRepository.findByAvailableTrueOrAvailableIsNull(pageable).map(DtoMapper::toItemSummaryDto);
     }
+
+    public Page<ItemSummaryDto> search(String query, UUID categoryId, int page, int size) {
+        String normalizedQuery = query == null ? "" : query.trim();
+        int resolvedPage = Math.max(page, 0);
+        int resolvedSize = Math.max(size, 1);
+        Pageable pageable =
+                PageRequest.of(
+                        resolvedPage, resolvedSize, Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt"));
+
+        if (normalizedQuery.isEmpty() && categoryId == null) {
+            return Page.empty(pageable);
+        }
+
+        return itemRepository
+                .searchAvailable(normalizedQuery, categoryId, pageable)
+                .map(DtoMapper::toItemSummaryDto);
+    }
 }

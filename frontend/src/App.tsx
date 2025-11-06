@@ -12,6 +12,7 @@ import Auth from "./pages/Auth";
 import CreateListing from "./pages/CreateListing";
 import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
+import Search from "./pages/Search";
 import { useAuth } from "./providers/AuthProvider";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/search" element={<Search />} />
               <Route
                 path="/listings/new"
                 element={
