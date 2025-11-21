@@ -128,7 +128,7 @@ const Search = () => {
                 type="button"
                 variant="ghost"
                 className="h-9 gap-2 px-2 text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate("/")}
               >
                 <ArrowLeft className="h-4 w-4" />
                 Volver
