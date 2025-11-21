@@ -13,10 +13,6 @@ The sample project exposes a `GET /api/health` endpoint that returns `{ "status"
 
 ## Poblar la base de datos con 100k registros de prueba
 
-Para generar el esquema completo y cargar 100,000 filas sintéticas para pruebas de rendimiento, ejecuta el script SQL incluido:
+Al iniciar la aplicación, Flyway ejecuta automáticamente la migración `V5__seed_100k_synthetic_data.sql`, la cual genera 100,000 perfiles, cuentas de usuario e ítems sintéticos basados en los registros de ejemplo incluidos en `V1__create_schema_and_seed.sql`.
 
-```bash
-psql -U <usuario> -d <base_de_datos> -f backend/db/seed-100k.sql
-```
-
-El script recrea las tablas, inserta los datos de ejemplo iniciales y luego genera perfiles, usuarios e ítems adicionales con valores aleatorios para que puedas probar el backend con mayor volumen de datos.
+Si no deseas cargar estos datos masivos (por ejemplo, en ambientes de producción), desactiva Flyway en las propiedades de arranque o elimina la migración antes de desplegar.
