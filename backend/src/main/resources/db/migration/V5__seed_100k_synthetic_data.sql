@@ -30,7 +30,7 @@ SELECT
     CONCAT('+34 600 ', LPAD(CAST(n AS VARCHAR), 6, '0')) AS phone,
     ROUND(3 + (MOD(n, 200) / 100.0), 2) AS rating,
     MOD(n, 50) AS total_trades,
-    DATEADD('DAY', -MOD(n, 365), CURRENT_TIMESTAMP) AS created_at,
+    CURRENT_TIMESTAMP - (MOD(n, 365) * INTERVAL '1 day') AS created_at,
     CURRENT_TIMESTAMP AS updated_at
 FROM seq;
 
@@ -95,6 +95,6 @@ SELECT
     TRUE AS is_available,
     FALSE AS is_service,
     CONCAT('Ciudad Demo ', MOD(n, 100)) AS location,
-    DATEADD('DAY', -MOD(n, 180), CURRENT_TIMESTAMP) AS created_at,
+    CURRENT_TIMESTAMP - (MOD(n, 180) * INTERVAL '1 day') AS created_at,
     CURRENT_TIMESTAMP AS updated_at
 FROM seq;

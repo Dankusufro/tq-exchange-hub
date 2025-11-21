@@ -18,9 +18,10 @@ services:
       start_period: 10s
 
   backend:
-    image: maven:3.9-eclipse-temurin-17
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: tq_exchange_backend
-    working_dir: /app
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-tqexchange}
@@ -32,24 +33,21 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./backend:/app
-    command: mvn spring-boot:run
 
   frontend:
-    image: node:20-alpine
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     container_name: tq_exchange_frontend
-    working_dir: /app
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080}
     ports:
-      - "5173:5173"
+      - "5173:80"
     depends_on:
       backend:
         condition: service_started
-    volumes:
-      - ./frontend:/app
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
 
 volumes:
   postgres_data:
