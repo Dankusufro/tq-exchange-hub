@@ -101,8 +101,21 @@ const Search = () => {
       return [];
     }
 
-    return Array.from({ length: totalPages }, (_, index) => index);
-  }, [totalPages]);
+        const pages = new Set<number>();
+        pages.add(0);
+        pages.add(totalPages - 1);
+        pages.add(page);
+
+        if (page > 0) {
+            pages.add(page - 1);
+        }
+
+        if (page < totalPages - 1) {
+            pages.add(page + 1);
+        }
+
+        return Array.from(pages).sort((a, b) => a - b);
+    }, [page, totalPages]);
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -115,7 +128,7 @@ const Search = () => {
                 type="button"
                 variant="ghost"
                 className="h-9 gap-2 px-2 text-sm text-muted-foreground hover:text-foreground"
-                onClick={() => navigate(-1)}
+                onClick={() => navigate("/")}
               >
                 <ArrowLeft className="h-4 w-4" />
                 Volver
