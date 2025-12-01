@@ -1,5 +1,6 @@
 package com.tq.exchangehub.repository;
 
+import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import java.util.Collection;
@@ -13,6 +14,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface TradeRepository extends JpaRepository<Trade, UUID> {
     List<Trade> findByStatus(TradeStatus status);
+    long countByOwnerOrRequesterAndStatus(Profile owner, Profile requester, TradeStatus status);
 
     @Query(
             "SELECT t FROM Trade t WHERE t.owner.id = :ownerId OR t.requester.id = :requesterId")

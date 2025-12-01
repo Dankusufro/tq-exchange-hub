@@ -14,6 +14,10 @@ import Favorites from "./pages/Favorites";
 import Profile from "./pages/Profile";
 import Search from "./pages/Search";
 import { useAuth } from "./providers/AuthProvider";
+import EditProfile from "./pages/EditProfile";
+import ReviewForm from "./pages/ReviewForm.tsx";
+
+
 
 const queryClient = new QueryClient();
 
@@ -42,6 +46,14 @@ const App = () => (
           <Sonner />
           <BrowserRouter basename={import.meta.env.BASE_URL}>
             <Routes>
+              <Route
+                  path="/edit-profile"
+                  element={
+                    <ProtectedRoute>
+                      <EditProfile />
+                    </ProtectedRoute>
+                  }
+              />
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/search" element={<Search />} />
@@ -61,6 +73,14 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+                <Route
+                    path="/trades/:tradeId/review/:reviewedId"
+                    element={
+                        <ProtectedRoute>
+                            <ReviewForm />
+                        </ProtectedRoute>
+                    }
+                />
               <Route path="/favorites" element={<Favorites />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

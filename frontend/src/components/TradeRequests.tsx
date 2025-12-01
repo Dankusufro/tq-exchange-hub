@@ -11,6 +11,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/use-toast";
+import { useNavigate } from "react-router-dom"; // <-- agregar al inicio del componente
+
 
 const statusCopy: Record<string, string> = {
   pending: "Pendiente",
@@ -21,6 +23,7 @@ const statusCopy: Record<string, string> = {
 
 const TradeRequests = () => {
   const { user } = useAuth();
+  const navigate = useNavigate(); // <-- dentro de TradeRequests
   const {
     requests,
     isLoading,
@@ -304,6 +307,16 @@ const TradeRequests = () => {
                         <Mail className="h-4 w-4" />
                         Enviar por correo
                       </Button>
+
+                      <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => navigate(`/trades/${request.id}/review/${request.owner_id === user.id ? request.requester_id : request.owner_id}`)}
+                          className="gap-2"
+                      >
+                        Dejar valoración
+                      </Button>
+
                     </>
                   )}
                 </div>

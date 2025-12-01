@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { CalendarDays, ChevronLeft, MapPin, Phone, Sparkles, Star, TrendingUp } from "lucide-react";
 import TradeChat from "@/components/trade/TradeChat";
 import useTradeRequests from "@/hooks/use-trade-requests";
+import React, { useState } from "react";
 
 const formatDate = (value: string | null) => {
   if (!value) {
@@ -73,19 +74,49 @@ const Profile = () => {
     refetch,
   } = useQuery<Profile>({
     queryKey: ["profile", user?.id],
-    queryFn: async () => apiClient.get<Profile>(`/api/profiles/${user?.id}`),
     enabled: Boolean(user?.id),
-    initialData: user ?? undefined,
+    initialData: user ?? null,
+
+    queryFn: async () => {
+      if (!user?.id) {
+        // nunca devolvemos undefined: devolvemos null o un objeto vacío si no hay id
+        return null as unknown as Profile;
+      }
+
+      // apiClient ya retorna el JSON parseado (no es axios)
+      const result = await apiClient.get<Profile>(`/api/profiles/${user.id}`);
+
+      // debug: imprime el valor crudo que devuelve apiClient
+      console.log("PROFILE - apiClient.get returned:", result);
+
+      // result es ya el perfil (no result.data)
+      // Si por alguna razón es undefined, devolvemos null para evitar el error de react-query
+      return result ?? null;
+    },
   });
+  console.log("PROFILE RECEIVED:", profile);
+
+  const currentProfile = profile ?? user;
+  const [totalTrades, setTotalTrades] = useState(currentProfile.totalTrades ?? 0);
+
+  React.useEffect(() => {
+    setTotalTrades(currentProfile.totalTrades ?? 0);
+  }, [currentProfile.totalTrades]);
+
 
   if (!user) {
     return null;
   }
 
-  const currentProfile = profile ?? user;
   const joinedDate = formatDate(currentProfile.createdAt);
   const ratingLabel = formatRating(currentProfile.rating);
   const formattedPhone = formatPhone(currentProfile.phone);
+
+  const handleTradeCompleted = () => {
+    setTotalTrades(prev => prev + 1); // aumentas localmente
+    refetch(); // opcional, para sincronizar con el servidor
+  };
+
 
   const activeTradeId = tradeRequests.length > 0 ? tradeRequests[0].id : null;
 
@@ -109,7 +140,7 @@ const Profile = () => {
                 <h1 className="text-3xl font-bold text-foreground">Mi perfil</h1>
                 <p className="text-muted-foreground max-w-2xl">
                   Gestiona tu presencia en TruequePlus, comparte tu historia y mantiene al día tu
-                  información para inspirar confianza en la comunidad.
+                  información para inspirar confianza en la comunidad
                 </p>
               </div>
               {isFetching && (
@@ -144,53 +175,64 @@ const Profile = () => {
             <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
               <Card className="lg:col-span-1 lg:row-span-2">
                 <CardHeader className="flex flex-col gap-6 md:flex-row md:items-center">
-                  <Avatar className="h-24 w-24 border-2 border-primary/20">
-                    <AvatarImage
-                      src={currentProfile.avatarUrl ?? undefined}
-                      alt={currentProfile.displayName}
-                    />
-                    <AvatarFallback className="text-xl font-semibold">
-                      {currentProfile.displayName
-                        .split(" ")
-                        .map((part) => part.charAt(0))
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase() || "?"}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="flex items-center gap-6">
+                    <Avatar className="h-24 w-24 border-2 border-primary/20">
+                      <AvatarImage
+                          src={currentProfile.avatarUrl ?? undefined}
+                          alt={currentProfile.displayName}
+                      />
+                      <AvatarFallback className="text-xl font-semibold">
+                        {currentProfile.displayName
+                            .split(" ")
+                            .map((part) => part.charAt(0))
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  <div className="space-y-3 text-center md:text-left">
-                    <div>
-                      <CardTitle className="text-2xl">{currentProfile.displayName}</CardTitle>
-                      {currentProfile.location && (
-                        <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground md:justify-start">
-                          <MapPin className="h-4 w-4" />
-                          {currentProfile.location}
-                        </p>
-                      )}
+                    <div className="space-y-3 text-center md:text-left">
+                      <div>
+                        <CardTitle className="text-2xl">{currentProfile.displayName}</CardTitle>
+                        {currentProfile.location && (
+                            <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground md:justify-start">
+                              <MapPin className="h-4 w-4"/>
+                              {currentProfile.location}
+                            </p>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
-                      {joinedDate && (
-                        <Badge variant="secondary" className="flex items-center gap-1">
-                          <CalendarDays className="h-3.5 w-3.5" />
-                          Miembro desde {joinedDate}
-                        </Badge>
-                      )}
-                      {(currentProfile.totalTrades ?? 0) > 0 && (
-                        <Badge className="flex items-center gap-1 bg-gradient-primary text-white">
-                          <TrendingUp className="h-3.5 w-3.5" />
-                          {currentProfile.totalTrades} trueques completados
-                        </Badge>
-                      )}
-                      {ratingLabel && (
-                        <Badge variant="outline" className="flex items-center gap-1">
-                          <Star className="h-3.5 w-3.5 text-amber-500" />
-                          {ratingLabel} / 5.0
-                        </Badge>
-                      )}
+
+                      <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                        {joinedDate && (
+                            <Badge variant="secondary" className="flex items-center gap-1">
+                              <CalendarDays className="h-3.5 w-3.5"/>
+                              Miembro desde {joinedDate}
+                            </Badge>
+                        )}
+                        {(currentProfile.totalTrades ?? 0) > 0 && (
+                            <Badge className="flex items-center gap-1 bg-gradient-primary text-white">
+                              <TrendingUp className="h-3.5 w-3.5"/>
+                              {currentProfile.totalTrades} trueques completados
+                            </Badge>
+                        )}
+                        {ratingLabel && (
+                            <Badge variant="outline" className="flex items-center gap-1">
+                              <Star className="h-3.5 w-3.5 text-amber-500"/>
+                              {ratingLabel} / 5.0
+                            </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
+
+                  <Button
+                      variant="default"
+                      onClick={() => navigate("/edit-profile")}
+                      className="self-start md:self-center"
+                  >
+                    Editar perfil
+                  </Button>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <section className="space-y-2">

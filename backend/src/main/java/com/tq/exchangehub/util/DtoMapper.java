@@ -34,11 +34,19 @@ public final class DtoMapper {
         dto.setLocation(profile.getLocation());
         dto.setPhone(profile.getPhone());
         dto.setRating(profile.getRating());
-        dto.setTotalTrades(profile.getTotalTrades());
+        dto.setTotalTrades(profile.getTotalTrades()); // solo copia de la entidad
         dto.setCreatedAt(profile.getCreatedAt());
         dto.setUpdatedAt(profile.getUpdatedAt());
+        dto.setRating(profile.getRating()); //NUEVO
         return dto;
     }
+
+    public static ProfileDto toProfileDtoWithTotalTrades(Profile profile, int totalTrades) {
+        ProfileDto dto = toProfileDto(profile); // llama al original
+        dto.setTotalTrades(totalTrades);       // sobrescribe con el valor dinámico
+        return dto;
+    }
+
 
     public static ItemDto toItemDto(Item item) {
         ItemDto dto = new ItemDto();

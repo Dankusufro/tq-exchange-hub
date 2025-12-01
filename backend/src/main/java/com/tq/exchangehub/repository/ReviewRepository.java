@@ -10,4 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ReviewRepository extends JpaRepository<Review, UUID> {
     List<Review> findByReviewed(Profile profile);
     List<Review> findByTrade(Trade trade);
+
+    List<Review> findByReviewedId(UUID reviewedId); //NUEVO
 }

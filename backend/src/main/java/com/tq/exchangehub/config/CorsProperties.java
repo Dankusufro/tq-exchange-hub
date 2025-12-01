@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+//CORS = lista de frontends que tienen permiso para hablar con tu backend.
+
 @ConfigurationProperties(prefix = "application.cors")
 public class CorsProperties {
 

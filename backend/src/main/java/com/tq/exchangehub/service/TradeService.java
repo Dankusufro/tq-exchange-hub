@@ -217,7 +217,19 @@ public class TradeService {
         trade.setStatus(status);
         trade.setUpdatedAt(OffsetDateTime.now());
         Trade saved = tradeRepository.save(trade);
+        // Actualizar totalTrades solo si el trade se completó
+        if (status == TradeStatus.COMPLETED) {
+            recalculateTotalTrades(saved.getOwner());
+            recalculateTotalTrades(saved.getRequester());
+        }
+
         eventPublisher.publishEvent(new TradeStatusChangedEvent(saved, actorProfileId));
         return DtoMapper.toTradeDto(saved);
+    }
+
+    private void recalculateTotalTrades(Profile profile) {
+        long completedTrades = tradeRepository.countByOwnerOrRequesterAndStatus(profile, profile, TradeStatus.COMPLETED);
+        profile.setTotalTrades((int) completedTrades);
+        profileRepository.save(profile);
     }
 }

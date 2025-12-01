@@ -31,6 +31,7 @@ interface MessageDto {
 interface TradeChatProps {
   tradeId: string | null;
   className?: string;
+
 }
 
 const formatMessageTimestamp = (value: string) => {

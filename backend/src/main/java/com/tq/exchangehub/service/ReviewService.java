@@ -73,6 +73,19 @@ public class ReviewService {
         review.setComment(request.getComment());
         review.setCreatedAt(OffsetDateTime.now());
         Review saved = reviewRepository.save(review);
+
+        // ---------------- NUEVO: recalcular rating promedio ----------------
+        List<Review> reviews = reviewRepository.findByReviewed(reviewed);
+
+        double averageRating = reviews.stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
+
+        reviewed.setRating(averageRating);
+        profileRepository.save(reviewed);
+        // -------------------------------------------------------------------
+
         return DtoMapper.toReviewDto(saved);
     }
 }
