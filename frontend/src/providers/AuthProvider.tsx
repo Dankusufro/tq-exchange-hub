@@ -23,6 +23,7 @@ type Profile = {
   totalTrades: number | null;
   createdAt: string | null;
   updatedAt: string | null;
+  role?: "ADMIN" | "USER";
 };
 
 type AuthResponse = {
