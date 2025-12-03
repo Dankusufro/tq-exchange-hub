@@ -59,6 +59,8 @@ public class SecurityConfig {
                                 "/api/search/**",
                                 "/api/profiles/**")
                         .permitAll()
+                        .requestMatchers("/api/admin/**")
+                        .hasRole("ADMIN")
                         .anyRequest()
                         .authenticated())
                 .headers(headers -> headers.frameOptions(frame -> frame.disable()))
