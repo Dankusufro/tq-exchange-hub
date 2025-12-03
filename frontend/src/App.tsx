@@ -16,12 +16,16 @@ import Search from "./pages/Search";
 import { useAuth } from "./providers/AuthProvider";
 import EditProfile from "./pages/EditProfile";
 import ReviewForm from "./pages/ReviewForm.tsx";
+import AdminDashboard from "./pages/AdminDashboard";
+import AccessDenied from "./pages/AccessDenied";
 
 
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+type ProtectedRouteProps = { children: ReactElement; requiredRole?: "ADMIN" | "USER" };
+
+const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const { user, isLoading } = useAuth();
   const location = useLocation();
   const from = `${location.pathname}${location.search}${location.hash}`;
@@ -32,6 +36,10 @@ const ProtectedRoute = ({ children }: { children: ReactElement }) => {
 
   if (!user) {
     return <Navigate to="/auth" replace state={{ from }} />;
+  }
+
+  if (requiredRole && user.role !== requiredRole) {
+    return <AccessDenied />;
   }
 
   return children;
@@ -62,6 +70,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <CreateListing />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="ADMIN">
+                    <AdminDashboard />
                   </ProtectedRoute>
                 }
               />

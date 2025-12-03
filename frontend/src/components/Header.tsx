@@ -34,6 +34,7 @@ import {
   Menu,
   MessageCircle,
   Plus,
+  ShieldCheck,
   User,
   Star,
   TrendingUp,
@@ -176,6 +177,7 @@ const Header = () => {
 
   const messageNotifications = notifications.filter((notification) => notification.category === "message");
   const generalNotifications = notifications.filter((notification) => notification.category !== "message");
+  const isAdmin = user?.role === "ADMIN";
 
   const messageUnreadCount = messageNotifications.filter((notification) => !notification.read).length;
   const generalUnreadCount = generalNotifications.filter((notification) => !notification.read).length;
@@ -267,6 +269,28 @@ const Header = () => {
                 <Plus className="h-4 w-4" />
               </Link>
             </Button>
+
+            {isAdmin && (
+              <>
+                <Button variant="outline" className="hidden lg:flex items-center gap-2" asChild>
+                  <Link to="/admin">
+                    <ShieldCheck className="h-4 w-4" />
+                    Admin
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden"
+                  asChild
+                  aria-label="Abrir panel de administración"
+                >
+                  <Link to="/admin">
+                    <ShieldCheck className="h-5 w-5" />
+                  </Link>
+                </Button>
+              </>
+            )}
             
             <Popover>
               <PopoverTrigger asChild>
@@ -373,6 +397,19 @@ const Header = () => {
                   >
                     Mi perfil
                   </DropdownMenuItem>
+                  {isAdmin && (
+                    <DropdownMenuItem
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        navigate("/admin");
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" />
+                        Panel admin
+                      </div>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onSelect={(event) => {
