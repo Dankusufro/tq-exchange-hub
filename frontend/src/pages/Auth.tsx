@@ -18,6 +18,15 @@ const Auth = () => {
   const { toast } = useToast();
 
   const redirectTo = location.state?.from ?? "/";
+  const isAdminRoute = (path?: string) => typeof path === "string" && path.startsWith("/admin");
+  const resolveRedirectPath = (role?: "ADMIN" | "USER") => {
+    if (role === "ADMIN") {
+      const adminRedirect = location.state?.from;
+      return isAdminRoute(adminRedirect) ? adminRedirect : "/admin";
+    }
+
+    return redirectTo;
+  };
 
   const [loginForm, setLoginForm] = useState({ email: "", password: "" });
   const [registerForm, setRegisterForm] = useState({
@@ -55,7 +64,7 @@ const Auth = () => {
         title: "Sesión iniciada",
         description: `Bienvenido de nuevo, ${session.profile.displayName}!`,
       });
-      navigate(redirectTo, { replace: true });
+      navigate(resolveRedirectPath(session.profile.role), { replace: true });
     } catch (error) {
       const message =
         error instanceof Error
@@ -91,7 +100,7 @@ const Auth = () => {
         title: "Registro exitoso",
         description: `¡Hola ${session.profile.displayName}! Tu cuenta ya está lista para usarla en TruequePlus.`,
       });
-      navigate(redirectTo, { replace: true });
+      navigate(resolveRedirectPath(session.profile.role), { replace: true });
     } catch (error) {
       const message =
         error instanceof Error
