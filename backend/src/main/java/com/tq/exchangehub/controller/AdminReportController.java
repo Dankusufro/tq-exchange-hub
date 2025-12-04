@@ -3,6 +3,8 @@ package com.tq.exchangehub.controller;
 import com.tq.exchangehub.service.AdminReportService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Pattern;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/reports")
 @PreAuthorize("hasRole('ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
+@Validated
 public class AdminReportController {
 
     private final AdminReportService adminReportService;
@@ -27,7 +30,10 @@ public class AdminReportController {
     }
 
     @GetMapping(produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> downloadReport(@RequestParam("period") String period) {
+    public ResponseEntity<byte[]> downloadReport(
+            @RequestParam("period")
+            @Pattern(regexp = "\\d{4}-\\d{2}", message = "El periodo es obligatorio en formato YYYY-MM")
+                    String period) {
         byte[] pdfContent = adminReportService.generateMonthlyReport(period);
 
         HttpHeaders headers = new HttpHeaders();
