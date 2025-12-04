@@ -34,4 +34,6 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> 
             @Param("role") Role role,
             @Param("location") String location,
             @Param("createdAfter") OffsetDateTime createdAfter);
+
+    long countByCreatedAtBetween(OffsetDateTime startInclusive, OffsetDateTime endExclusive);
 }

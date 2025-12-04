@@ -19,6 +19,7 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  Download,
   Leaf,
   LayoutDashboard,
   Loader2,
@@ -137,6 +138,8 @@ const AdminDashboard = () => {
   const [userRoleFilter, setUserRoleFilter] = useState<"ALL" | "ADMIN" | "USER">("ALL");
   const [userLocationFilter, setUserLocationFilter] = useState("");
   const [userDateFilter, setUserDateFilter] = useState("");
+  const [reportPeriod, setReportPeriod] = useState(() => new Date().toISOString().slice(0, 7));
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
 
   const { data: categories = [] } = useCategories();
 
@@ -372,6 +375,45 @@ const AdminDashboard = () => {
   const getErrorMessage = (error: unknown, fallback: string) =>
     error instanceof Error ? error.message : fallback;
 
+  const handleDownloadReport = useCallback(async () => {
+    if (!reportPeriod) {
+      toast({
+        title: "Selecciona un periodo",
+        description: "El formato esperado es YYYY-MM.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloadingReport(true);
+
+    try {
+      const params = new URLSearchParams({ period: reportPeriod });
+      const blob = await apiClient.get<Blob>(`/api/admin/reports?${params.toString()}`, {
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `reporte-${reportPeriod}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast({ title: "Reporte generado", description: "La descarga comenzará en breve." });
+    } catch (error: unknown) {
+      toast({
+        title: "No se pudo descargar el reporte",
+        description: getErrorMessage(error, "Intenta nuevamente más tarde."),
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  }, [reportPeriod, toast]);
+
   const handleDisableItem = useCallback(
     async (item: AdminItem) => {
       const confirmed = window.confirm(`¿Deshabilitar la publicación "${item.title}"?`);
@@ -597,12 +639,41 @@ const AdminDashboard = () => {
                 publicaciones en tiempo real.
               </p>
             </div>
-            {isAnyLoading && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Sincronizando datos...
+            <div className="flex flex-col items-start gap-2 md:items-end">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                <Input
+                  type="month"
+                  value={reportPeriod}
+                  max={new Date().toISOString().slice(0, 7)}
+                  onChange={(event) => setReportPeriod(event.target.value)}
+                  className="w-full sm:w-44"
+                  aria-label="Periodo de reporte"
+                />
+                <Button
+                  className="w-full sm:w-auto"
+                  onClick={handleDownloadReport}
+                  disabled={!reportPeriod || isDownloadingReport}
+                >
+                  {isDownloadingReport ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Generando...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Download className="h-4 w-4" />
+                      <span>Descargar reporte</span>
+                    </div>
+                  )}
+                </Button>
               </div>
-            )}
+              {isAnyLoading && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Sincronizando datos...
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
