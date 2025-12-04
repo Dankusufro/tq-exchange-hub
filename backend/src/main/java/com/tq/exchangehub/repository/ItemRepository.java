@@ -4,6 +4,7 @@ import com.tq.exchangehub.entity.Category;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.ModerationStatus;
 import com.tq.exchangehub.entity.Profile;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -45,4 +46,20 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
             @Param("categoryId") UUID categoryId,
             @Param("status") ModerationStatus status,
             Pageable pageable);
+
+    @Query(
+            """
+        SELECT i FROM Item i
+        WHERE (:categoryId IS NULL OR i.category.id = :categoryId)
+          AND (:moderationStatus IS NULL OR i.moderationStatus = :moderationStatus)
+          AND (:location IS NULL OR LOWER(COALESCE(i.location, '')) LIKE LOWER(CONCAT('%', :location, '%')))
+          AND (:createdAfter IS NULL OR i.createdAt >= :createdAfter)
+        ORDER BY i.createdAt DESC
+        """
+    )
+    List<Item> findAdminItems(
+            @Param("categoryId") UUID categoryId,
+            @Param("moderationStatus") ModerationStatus moderationStatus,
+            @Param("location") String location,
+            @Param("createdAfter") OffsetDateTime createdAfter);
 }
