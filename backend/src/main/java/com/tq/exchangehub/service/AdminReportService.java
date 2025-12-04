@@ -108,7 +108,8 @@ public class AdminReportService {
     }
 
     private byte[] renderPdf(String html) {
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             builder.withHtmlContent(html, "");
