@@ -3,6 +3,7 @@ package com.tq.exchangehub.repository;
 import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +16,9 @@ import org.springframework.data.repository.query.Param;
 public interface TradeRepository extends JpaRepository<Trade, UUID> {
     List<Trade> findByStatus(TradeStatus status);
     long countByOwnerOrRequesterAndStatus(Profile owner, Profile requester, TradeStatus status);
+    long countByStatus(TradeStatus status);
+
+    List<Trade> findByCreatedAtAfter(OffsetDateTime createdAt);
 
     @Query(
             "SELECT t FROM Trade t WHERE t.owner.id = :ownerId OR t.requester.id = :requesterId")

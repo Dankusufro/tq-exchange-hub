@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
@@ -11,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle, BarChart3, LayoutDashboard, Loader2, Shield, UserCog } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { useEffect, useMemo } from "react";
 
 interface AdminUser {
@@ -36,6 +38,20 @@ interface AdminItem {
   createdAt: string;
   updatedAt: string;
   wishlist: string[];
+}
+
+interface TimeSeriesPoint {
+  label: string;
+  value: number;
+}
+
+interface AdminMetrics {
+  totalUsers: number;
+  activeUsers: number;
+  completedTrades: number;
+  activeTrades: number;
+  tradeActivity: TimeSeriesPoint[];
+  signupsActivity: TimeSeriesPoint[];
 }
 
 const formatRelativeDate = (value: string) =>
@@ -66,29 +82,38 @@ const AdminDashboard = () => {
     queryFn: () => apiClient.get("/api/admin/items"),
   });
 
-  const metrics = useMemo(() => {
-    const totalUsers = users.length;
-    const adminCount = users.filter((user) => user.role === "ADMIN").length;
+  const {
+    data: metrics,
+    isLoading: isLoadingMetrics,
+    isError: isMetricsError,
+    error: metricsError,
+    refetch: refetchMetrics,
+  } = useQuery<AdminMetrics>({
+    queryKey: ["admin", "metrics"],
+    queryFn: () => apiClient.get("/api/admin/metrics"),
+  });
+
+  const summaryCards = useMemo(() => {
     const totalItems = items.length;
     const activeItems = items.filter((item) => item.available !== false).length;
 
     return [
       {
-        label: "Usuarios registrados",
-        value: totalUsers,
-        helper: `${adminCount} administradores activos`,
+        label: "Usuarios conectados",
+        value: metrics?.activeUsers ?? "–",
+        helper: `${metrics?.totalUsers ?? 0} cuentas registradas`,
         icon: UserCog,
+      },
+      {
+        label: "Trueques completados",
+        value: metrics?.completedTrades ?? "–",
+        helper: `${metrics?.activeTrades ?? 0} en progreso`,
+        icon: LayoutDashboard,
       },
       {
         label: "Publicaciones totales",
         value: totalItems,
         helper: `${activeItems} disponibles para trueque`,
-        icon: LayoutDashboard,
-      },
-      {
-        label: "Servicios vs productos",
-        value: `${items.filter((item) => item.service).length} / ${items.filter((item) => !item.service).length}`,
-        helper: "Servicios / Productos",
         icon: BarChart3,
       },
       {
@@ -98,22 +123,63 @@ const AdminDashboard = () => {
         icon: Shield,
       },
     ];
-  }, [items, users]);
+  }, [items, metrics]);
+
+  const activitySeries = useMemo(() => {
+    if (!metrics) return [];
+
+    const signupsByLabel = new Map(metrics.signupsActivity.map((point) => [point.label, point.value]));
+
+    return metrics.tradeActivity.map((point) => ({
+      hour: point.label,
+      trades: point.value,
+      signups: signupsByLabel.get(point.label) ?? 0,
+    }));
+  }, [metrics]);
+
+  const tradeStatusSeries = useMemo(
+    () => [
+      {
+        name: "Trueques",
+        completados: metrics?.completedTrades ?? 0,
+        activos: metrics?.activeTrades ?? 0,
+      },
+    ],
+    [metrics],
+  );
+
+  const activityChartConfig = useMemo(
+    () => ({
+      trades: { label: "Trueques", color: "hsl(var(--chart-1))" },
+      signups: { label: "Altas", color: "hsl(var(--chart-2))" },
+    }),
+    [],
+  );
+
+  const tradeStatusConfig = useMemo(
+    () => ({
+      completados: { label: "Completados", color: "hsl(var(--chart-1))" },
+      activos: { label: "Activos", color: "hsl(var(--chart-3))" },
+    }),
+    [],
+  );
 
   useEffect(() => {
-    if (!isUsersError && !isItemsError) {
+    if (!isUsersError && !isItemsError && !isMetricsError) {
       return;
     }
 
-    const description = (usersError || itemsError)?.message ?? "No pudimos cargar la consola de administración.";
+    const description =
+      (usersError || itemsError || metricsError)?.message ?? "No pudimos cargar la consola de administración.";
     toast({
       title: "Error al cargar datos de administración",
       description,
       variant: "destructive",
     });
-  }, [isItemsError, isUsersError, itemsError, toast, usersError]);
+  }, [isItemsError, isMetricsError, isUsersError, itemsError, metricsError, toast, usersError]);
 
-  const isLoading = isLoadingItems || isLoadingUsers;
+  const isAnyLoading = isLoadingItems || isLoadingUsers || isLoadingMetrics;
+  const isTableLoading = isLoadingItems || isLoadingUsers;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -129,7 +195,7 @@ const AdminDashboard = () => {
                 publicaciones en tiempo real.
               </p>
             </div>
-            {(isLoadingUsers || isLoadingItems) && (
+            {isAnyLoading && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Sincronizando datos...
@@ -138,7 +204,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map((metric) => {
+            {summaryCards.map((metric) => {
               const Icon = metric.icon;
               return (
                 <Card key={metric.label} className="shadow-sm">
@@ -157,6 +223,141 @@ const AdminDashboard = () => {
             })}
           </div>
 
+          <div className="grid gap-6 lg:grid-cols-7">
+            <Card className="shadow-sm lg:col-span-4">
+              <CardHeader className="space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>Actividad en las últimas horas</CardTitle>
+                    <CardDescription>Trueques iniciados y nuevos registros por hora.</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refetchMetrics()} disabled={isLoadingMetrics}>
+                    {isLoadingMetrics ? <Loader2 className="h-4 w-4 animate-spin" /> : "Actualizar"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isLoadingMetrics && !metrics ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <p>Sincronizando métricas...</p>
+                  </div>
+                ) : null}
+
+                {isMetricsError ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    <div className="text-sm flex-1">
+                      <p className="font-medium">No se pudieron cargar las métricas</p>
+                      <p className="text-destructive/80">{metricsError?.message ?? "Inténtalo nuevamente."}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => refetchMetrics()}>
+                      Reintentar
+                    </Button>
+                  </div>
+                ) : null}
+
+                {!isLoadingMetrics && !isMetricsError && metrics ? (
+                  <ChartContainer config={activityChartConfig} className="h-[320px]">
+                    <LineChart data={activitySeries} margin={{ left: 0, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis
+                        dataKey="hour"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        minTickGap={16}
+                        fontSize={12}
+                      />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={12} fontSize={12} />
+                      <ChartTooltip
+                        cursor={{ strokeDasharray: "3 3" }}
+                        content={<ChartTooltipContent indicator="line" className="bg-background" />}
+                      />
+                      <Line type="monotone" dataKey="trades" stroke="var(--color-trades)" strokeWidth={3} dot={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="signups"
+                        stroke="var(--color-signups)"
+                        strokeWidth={2}
+                        dot={false}
+                        strokeDasharray="4 4"
+                      />
+                      <ChartLegend
+                        verticalAlign="bottom"
+                        content={<ChartLegendContent className="-mb-2 mt-2 text-muted-foreground" />}
+                      />
+                    </LineChart>
+                  </ChartContainer>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm lg:col-span-3">
+              <CardHeader className="space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>Estado de trueques</CardTitle>
+                    <CardDescription>Panorama de completados y transacciones activas.</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refetchMetrics()} disabled={isLoadingMetrics}>
+                    {isLoadingMetrics ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refrescar"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isLoadingMetrics && !metrics ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <p>Obteniendo estado global...</p>
+                  </div>
+                ) : null}
+
+                {isMetricsError ? (
+                  <div className="flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+                    <AlertCircle className="h-5 w-5" />
+                    <div className="text-sm flex-1">
+                      <p className="font-medium">No se pudo cargar el estado de trueques</p>
+                      <p className="text-destructive/80">{metricsError?.message ?? "Inténtalo nuevamente."}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => refetchMetrics()}>
+                      Reintentar
+                    </Button>
+                  </div>
+                ) : null}
+
+                {!isLoadingMetrics && !isMetricsError && metrics ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div className="rounded-lg border bg-muted/40 p-3">
+                        <p className="text-muted-foreground">Trueques completados</p>
+                        <p className="text-2xl font-bold text-foreground">{metrics.completedTrades}</p>
+                      </div>
+                      <div className="rounded-lg border bg-muted/40 p-3">
+                        <p className="text-muted-foreground">Trueques activos</p>
+                        <p className="text-2xl font-bold text-foreground">{metrics.activeTrades}</p>
+                      </div>
+                    </div>
+                    <ChartContainer config={tradeStatusConfig} className="h-[260px]">
+                      <BarChart data={tradeStatusSeries} barSize={36} margin={{ left: 8, right: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                        <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} width={32} />
+                        <ChartTooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="completados" fill="var(--color-completados)" radius={6} />
+                        <Bar dataKey="activos" fill="var(--color-activos)" radius={6} />
+                        <ChartLegend
+                          verticalAlign="bottom"
+                          content={<ChartLegendContent className="-mb-2 mt-2 text-muted-foreground" />}
+                        />
+                      </BarChart>
+                    </ChartContainer>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
+
           <div className="grid gap-6 lg:grid-cols-5">
             <Card className="shadow-sm lg:col-span-2">
               <CardHeader className="space-y-1">
@@ -171,7 +372,7 @@ const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(isLoadingUsers && users.length === 0) || isLoading ? (
+                {(isLoadingUsers && users.length === 0) || isTableLoading ? (
                   <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <p>Cargando usuarios...</p>
@@ -236,7 +437,7 @@ const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {(isLoadingItems && items.length === 0) || isLoading ? (
+                {(isLoadingItems && items.length === 0) || isTableLoading ? (
                   <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
                     <p>Cargando publicaciones...</p>
