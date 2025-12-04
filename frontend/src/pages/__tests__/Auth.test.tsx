@@ -51,7 +51,7 @@ const renderAuth = () =>
     </MemoryRouter>,
   );
 
-const createSession = (displayName: string) => ({
+const createSession = (displayName: string, role?: "ADMIN" | "USER") => ({
   tokens: { accessToken: "token", refreshToken: "refresh" },
   profile: {
     id: "id-1",
@@ -64,6 +64,7 @@ const createSession = (displayName: string) => ({
     totalTrades: null,
     createdAt: null,
     updatedAt: null,
+    role,
   },
 });
 
@@ -102,8 +103,31 @@ describe("Auth page", () => {
       );
     });
 
-    expect(navigateMock).toHaveBeenCalledWith("/");
+    expect(navigateMock).toHaveBeenCalledWith("/", { replace: true });
     expect(submitButton).not.toBeDisabled();
+  });
+
+  it("redirects admin users to the admin dashboard by default", async () => {
+    const deferred = createDeferred<ReturnType<typeof createSession>>();
+    mockSignIn.mockReturnValue(deferred.promise);
+    const user = userEvent.setup();
+    renderAuth();
+
+    await user.type(screen.getByLabelText(/Correo electrónico/i, { selector: "#login-email" }), "admin@example.com");
+    await user.type(screen.getByLabelText(/Contraseña/i, { selector: "#login-password" }), "password123");
+
+    await user.click(screen.getByRole("button", { name: /iniciar sesión/i }));
+
+    const session = createSession("Admin User", "ADMIN");
+    deferred.resolve(session);
+
+    await waitFor(() => {
+      expect(mockSignIn).toHaveBeenCalledWith({ email: "admin@example.com", password: "password123" });
+    });
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith("/admin", { replace: true });
+    });
   });
 
   it("maps the register name to displayName and notifies on success", async () => {
@@ -147,7 +171,7 @@ describe("Auth page", () => {
       );
     });
 
-    expect(navigateMock).toHaveBeenCalledWith("/");
+    expect(navigateMock).toHaveBeenCalledWith("/", { replace: true });
   });
 
   it("shows a validation toast when passwords do not match", async () => {
