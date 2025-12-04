@@ -239,7 +239,11 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
+          <Link
+            to="/"
+            aria-label="Ir al inicio"
+            className="flex items-center gap-2 rounded-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          >
             <div className="bg-gradient-primary rounded-lg p-2">
               <div className="text-white font-bold text-xl">TQ</div>
             </div>
@@ -247,7 +251,7 @@ const Header = () => {
               <div className="font-bold text-lg text-foreground">TruequePlus</div>
               <div className="text-xs text-muted-foreground -mt-1">Intercambia sin límites</div>
             </div>
-          </div>
+          </Link>
 
           {/* Search bar - Desktop */}
           <SearchBar
