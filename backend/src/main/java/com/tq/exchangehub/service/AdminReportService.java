@@ -78,7 +78,7 @@ public class AdminReportService {
                   <body>
                     <div class="header">
                       <h1>Resumen operativo</h1>
-                      <p>Periodo: <span class="badge">""" + monthLabel + """</span></p>
+                      <p>Periodo: <span class="badge">%s</span></p>
                     </div>
                     <table class="metrics">
                       <tr>
@@ -87,28 +87,29 @@ public class AdminReportService {
                       </tr>
                       <tr>
                         <td>Usuarios nuevos</td>
-                        <td>""" + newUsers + """</td>
+                        <td>%d</td>
                       </tr>
                       <tr>
                         <td>Trueques completados</td>
-                        <td>""" + completedTrades + """</td>
+                        <td>%d</td>
                       </tr>
                       <tr>
                         <td>Trueques cancelados</td>
-                        <td>""" + cancelledTrades + """</td>
+                        <td>%d</td>
                       </tr>
                       <tr>
                         <td>Publicaciones creadas</td>
-                        <td>""" + newItems + """</td>
+                        <td>%d</td>
                       </tr>
                     </table>
                   </body>
                 </html>
-                """;
+                """.formatted(monthLabel, newUsers, completedTrades, cancelledTrades, newItems);
     }
 
     private byte[] renderPdf(String html) {
-        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        try {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
             builder.withHtmlContent(html, "");
