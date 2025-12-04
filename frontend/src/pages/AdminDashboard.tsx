@@ -372,8 +372,20 @@ const AdminDashboard = () => {
     return "default" as const;
   };
 
-  const getErrorMessage = (error: unknown, fallback: string) =>
-    error instanceof Error ? error.message : fallback;
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error && typeof error === "object" && "message" in error) {
+      const message = (error as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim()) {
+        return message;
+      }
+    }
+
+    if (typeof error === "string" && error.trim()) {
+      return error;
+    }
+
+    return fallback;
+  };
 
   const handleDownloadReport = useCallback(async () => {
     if (!reportPeriod) {

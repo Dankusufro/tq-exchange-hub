@@ -10,6 +10,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import jakarta.validation.ConstraintViolationException;
 
 @ControllerAdvice
 public class RestExceptionHandler {
@@ -21,6 +22,20 @@ public class RestExceptionHandler {
                 "status", HttpStatus.BAD_REQUEST.value(),
                 "error", "Bad Request",
                 "message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException ex) {
+        String message = ex.getConstraintViolations().stream()
+                .findFirst()
+                .map(violation -> violation.getMessage())
+                .orElse("Solicitud inválida");
+
+        return ResponseEntity.badRequest().body(Map.of(
+                "timestamp", Instant.now(),
+                "status", HttpStatus.BAD_REQUEST.value(),
+                "error", "Bad Request",
+                "message", message));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
