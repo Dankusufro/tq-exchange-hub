@@ -4,10 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { apiClient } from "@/lib/api";
+import { useCategories } from "@/hooks/use-categories";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
@@ -126,6 +128,17 @@ const formatRelativeDate = (value: string) =>
 const AdminDashboard = () => {
   const { toast } = useToast();
   const [reportStatusFilter, setReportStatusFilter] = useState<AbuseReportStatus | "ALL">("PENDING");
+  const [itemCategoryFilter, setItemCategoryFilter] = useState<string | null>(null);
+  const [itemStatusFilter, setItemStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "DISABLED">(
+    "ALL",
+  );
+  const [itemLocationFilter, setItemLocationFilter] = useState("");
+  const [itemDateFilter, setItemDateFilter] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState<"ALL" | "ADMIN" | "USER">("ALL");
+  const [userLocationFilter, setUserLocationFilter] = useState("");
+  const [userDateFilter, setUserDateFilter] = useState("");
+
+  const { data: categories = [] } = useCategories();
 
   const {
     data: users = [],
@@ -134,8 +147,17 @@ const AdminDashboard = () => {
     error: usersError,
     refetch: refetchUsers,
   } = useQuery<AdminUser[]>({
-    queryKey: ["admin", "users"],
-    queryFn: () => apiClient.get("/api/admin/users"),
+    queryKey: ["admin", "users", userRoleFilter, userLocationFilter, userDateFilter],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (userRoleFilter !== "ALL") params.set("role", userRoleFilter);
+      if (userLocationFilter.trim()) params.set("location", userLocationFilter.trim());
+      if (userDateFilter) params.set("createdAfter", userDateFilter);
+
+      const query = params.toString();
+      const url = `/api/admin/users${query ? `?${query}` : ""}`;
+      return apiClient.get<AdminUser[]>(url);
+    },
   });
 
   const {
@@ -145,8 +167,25 @@ const AdminDashboard = () => {
     error: itemsError,
     refetch: refetchItems,
   } = useQuery<AdminItem[]>({
-    queryKey: ["admin", "items"],
-    queryFn: () => apiClient.get("/api/admin/items"),
+    queryKey: [
+      "admin",
+      "items",
+      itemCategoryFilter,
+      itemStatusFilter,
+      itemLocationFilter,
+      itemDateFilter,
+    ],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (itemCategoryFilter) params.set("categoryId", itemCategoryFilter);
+      if (itemStatusFilter !== "ALL") params.set("moderationStatus", itemStatusFilter);
+      if (itemLocationFilter.trim()) params.set("location", itemLocationFilter.trim());
+      if (itemDateFilter) params.set("createdAfter", itemDateFilter);
+
+      const query = params.toString();
+      const url = `/api/admin/items${query ? `?${query}` : ""}`;
+      return apiClient.get<AdminItem[]>(url);
+    },
   });
 
   const {
@@ -295,6 +334,25 @@ const AdminDashboard = () => {
     [],
   );
 
+  const itemStatusOptions = useMemo(
+    () => [
+      { value: "ALL", label: "Todos" },
+      { value: "APPROVED", label: "Aprobados" },
+      { value: "PENDING", label: "Pendientes" },
+      { value: "DISABLED", label: "Deshabilitados" },
+    ],
+    [],
+  );
+
+  const userRoleOptions = useMemo(
+    () => [
+      { value: "ALL", label: "Todos" },
+      { value: "ADMIN", label: "Administradores" },
+      { value: "USER", label: "Usuarios" },
+    ],
+    [],
+  );
+
   const reportStatusOptions = useMemo(
     () => [
       { value: "ALL", label: "Todos" },
@@ -397,6 +455,29 @@ const AdminDashboard = () => {
     },
     [refetchItems, refetchReports, refetchUsers, toast],
   );
+
+  const hasItemFilters = useMemo(
+    () => Boolean(itemCategoryFilter || itemStatusFilter !== "ALL" || itemLocationFilter || itemDateFilter),
+    [itemCategoryFilter, itemDateFilter, itemLocationFilter, itemStatusFilter],
+  );
+
+  const hasUserFilters = useMemo(
+    () => Boolean(userRoleFilter !== "ALL" || userLocationFilter || userDateFilter),
+    [userDateFilter, userLocationFilter, userRoleFilter],
+  );
+
+  const clearItemFilters = () => {
+    setItemCategoryFilter(null);
+    setItemStatusFilter("ALL");
+    setItemLocationFilter("");
+    setItemDateFilter("");
+  };
+
+  const clearUserFilters = () => {
+    setUserRoleFilter("ALL");
+    setUserLocationFilter("");
+    setUserDateFilter("");
+  };
 
   useEffect(() => {
     if (
@@ -858,6 +939,52 @@ const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Select value={userRoleFilter} onValueChange={(value) => setUserRoleFilter(value as "ALL" | "ADMIN" | "USER")}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Rol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {userRoleOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Ubicación (región o comuna)"
+                      value={userLocationFilter}
+                      onChange={(event) => setUserLocationFilter(event.target.value)}
+                    />
+                    <Input
+                      type="date"
+                      value={userDateFilter}
+                      onChange={(event) => setUserDateFilter(event.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {hasUserFilters ? (
+                      <>
+                        <span>Filtros activos:</span>
+                        {userRoleFilter !== "ALL" ? (
+                          <Badge variant="outline">Rol: {userRoleFilter}</Badge>
+                        ) : null}
+                        {userLocationFilter ? (
+                          <Badge variant="outline">Ubicación: {userLocationFilter}</Badge>
+                        ) : null}
+                        {userDateFilter ? <Badge variant="outline">Desde: {userDateFilter}</Badge> : null}
+                        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearUserFilters}>
+                          Limpiar
+                        </Button>
+                      </>
+                    ) : (
+                      <span>Sin filtros activos.</span>
+                    )}
+                  </div>
+                </div>
+
                 {(isLoadingUsers && users.length === 0) || isTableLoading ? (
                   <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -923,6 +1050,73 @@ const AdminDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="space-y-3 rounded-lg border bg-muted/30 p-3">
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <Select
+                      value={itemCategoryFilter ?? "ALL"}
+                      onValueChange={(value) => setItemCategoryFilter(value === "ALL" ? null : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Categoría" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL">Todas las categorías</SelectItem>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={itemStatusFilter} onValueChange={(value) => setItemStatusFilter(value as typeof itemStatusFilter)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Estado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {itemStatusOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Ubicación (región o comuna)"
+                      value={itemLocationFilter}
+                      onChange={(event) => setItemLocationFilter(event.target.value)}
+                    />
+                    <Input
+                      type="date"
+                      value={itemDateFilter}
+                      onChange={(event) => setItemDateFilter(event.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    {hasItemFilters ? (
+                      <>
+                        <span>Filtros activos:</span>
+                        {itemCategoryFilter ? (
+                          <Badge variant="outline">
+                            Categoría: {categories.find((category) => category.id === itemCategoryFilter)?.name ?? itemCategoryFilter}
+                          </Badge>
+                        ) : null}
+                        {itemStatusFilter !== "ALL" ? (
+                          <Badge variant="outline">Estado: {itemStatusFilter}</Badge>
+                        ) : null}
+                        {itemLocationFilter ? (
+                          <Badge variant="outline">Ubicación: {itemLocationFilter}</Badge>
+                        ) : null}
+                        {itemDateFilter ? <Badge variant="outline">Desde: {itemDateFilter}</Badge> : null}
+                        <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearItemFilters}>
+                          Limpiar
+                        </Button>
+                      </>
+                    ) : (
+                      <span>Sin filtros activos.</span>
+                    )}
+                  </div>
+                </div>
+
                 {(isLoadingItems && items.length === 0) || isTableLoading ? (
                   <div className="flex flex-col items-center justify-center gap-3 py-10 text-muted-foreground">
                     <Loader2 className="h-6 w-6 animate-spin" />

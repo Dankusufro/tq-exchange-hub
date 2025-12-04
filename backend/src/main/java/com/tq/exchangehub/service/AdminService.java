@@ -7,6 +7,7 @@ import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.TimeSeriesPointDto;
 import com.tq.exchangehub.entity.Item;
 import com.tq.exchangehub.entity.ModerationStatus;
+import com.tq.exchangehub.entity.Role;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.entity.UserAccount;
@@ -14,7 +15,9 @@ import com.tq.exchangehub.repository.ItemRepository;
 import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.repository.UserAccountRepository;
 import com.tq.exchangehub.util.DtoMapper;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
@@ -48,14 +51,23 @@ public class AdminService {
         this.simpUserRegistry = simpUserRegistry;
     }
 
-    public List<AdminUserDto> getUsers() {
-        return userAccountRepository.findAll().stream()
+    public List<AdminUserDto> getUsers(Role role, String location, LocalDate createdAfter) {
+        String normalizedLocation = normalizeFilter(location);
+        OffsetDateTime createdAtFilter = toStartOfDay(createdAfter);
+
+        return userAccountRepository.findAdminUsers(role, normalizedLocation, createdAtFilter).stream()
                 .map(this::toAdminUserDto)
                 .collect(Collectors.toList());
     }
 
-    public List<ItemDto> getItems() {
-        return itemRepository.findAll().stream().map(DtoMapper::toItemDto).collect(Collectors.toList());
+    public List<ItemDto> getItems(
+            UUID categoryId, ModerationStatus moderationStatus, String location, LocalDate createdAfter) {
+        String normalizedLocation = normalizeFilter(location);
+        OffsetDateTime createdAtFilter = toStartOfDay(createdAfter);
+
+        return itemRepository.findAdminItems(categoryId, moderationStatus, normalizedLocation, createdAtFilter).stream()
+                .map(DtoMapper::toItemDto)
+                .collect(Collectors.toList());
     }
 
     public AdminMetricsDto getMetrics() {
@@ -198,6 +210,19 @@ public class AdminService {
                 account.getRole(),
                 account.getProfile() != null ? account.getProfile().getDisplayName() : null,
                 account.getCreatedAt());
+    }
+
+    private String normalizeFilter(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private OffsetDateTime toStartOfDay(LocalDate date) {
+        return date == null ? null : date.atStartOfDay().atOffset(ZoneOffset.UTC);
     }
 
     private static class LocationAggregation {
