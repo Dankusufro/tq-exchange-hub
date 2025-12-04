@@ -13,7 +13,14 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle, BarChart3, LayoutDashboard, Loader2, Shield, UserCog } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AdminUser {
   id: string;
@@ -55,11 +62,30 @@ interface AdminMetrics {
   signupsActivity: TimeSeriesPoint[];
 }
 
+type AbuseReportStatus = "PENDING" | "RESOLVED" | "SANCTIONED";
+
+type AbuseReportAction = "RESOLVE" | "SUSPEND_USER" | "REMOVE_ITEM";
+
+interface AbuseReport {
+  id: string;
+  reporterId?: string;
+  reporterName?: string;
+  reportedUserId?: string;
+  reportedUserName?: string;
+  reportedItemId?: string;
+  reportedItemTitle?: string;
+  reason: string;
+  status: AbuseReportStatus;
+  createdAt: string;
+  resolvedAt?: string;
+}
+
 const formatRelativeDate = (value: string) =>
   formatDistanceToNow(new Date(value), { addSuffix: true, locale: es });
 
 const AdminDashboard = () => {
   const { toast } = useToast();
+  const [reportStatusFilter, setReportStatusFilter] = useState<AbuseReportStatus | "ALL">("PENDING");
 
   const {
     data: users = [],
@@ -128,6 +154,20 @@ const AdminDashboard = () => {
     ];
   }, [items, metrics]);
 
+  const {
+    data: reports = [],
+    isLoading: isLoadingReports,
+    isError: isReportsError,
+    error: reportsError,
+    refetch: refetchReports,
+  } = useQuery<AbuseReport[]>({
+    queryKey: ["admin", "reports", reportStatusFilter],
+    queryFn: () =>
+      apiClient.get(
+        `/api/admin/reports${reportStatusFilter === "ALL" ? "" : `?status=${reportStatusFilter}`}`,
+      ),
+  });
+
   const activitySeries = useMemo(() => {
     if (!metrics) return [];
 
@@ -166,6 +206,22 @@ const AdminDashboard = () => {
     }),
     [],
   );
+
+  const reportStatusOptions = useMemo(
+    () => [
+      { value: "ALL", label: "Todos" },
+      { value: "PENDING", label: "Pendientes" },
+      { value: "RESOLVED", label: "Resueltos" },
+      { value: "SANCTIONED", label: "Sancionados" },
+    ],
+    [],
+  );
+
+  const getReportBadgeVariant = (status: AbuseReportStatus) => {
+    if (status === "PENDING") return "secondary" as const;
+    if (status === "SANCTIONED") return "destructive" as const;
+    return "default" as const;
+  };
 
   const handleDisableItem = useCallback(
     async (item: AdminItem) => {
@@ -209,21 +265,74 @@ const AdminDashboard = () => {
     [refetchItems, toast],
   );
 
+  const handleResolveReport = useCallback(
+    async (report: AbuseReport) => {
+      try {
+        await apiClient.patch(`/api/admin/reports/${report.id}/resolve`);
+        toast({ title: "Reporte resuelto", description: "El caso se marcó como atendido." });
+        refetchReports();
+      } catch (error: any) {
+        toast({
+          title: "No se pudo resolver el reporte",
+          description: error?.message ?? "Intenta nuevamente.",
+          variant: "destructive",
+        });
+      }
+    },
+    [refetchReports, toast],
+  );
+
+  const handleSanctionReport = useCallback(
+    async (report: AbuseReport, action: AbuseReportAction) => {
+      const actionLabel = action === "SUSPEND_USER" ? "suspender" : "eliminar";
+      const confirmed = window.confirm(
+        `¿Confirmas ${actionLabel} ${action === "SUSPEND_USER" ? "al usuario" : "la publicación"}?`,
+      );
+      if (!confirmed) return;
+
+      try {
+        await apiClient.patch(`/api/admin/reports/${report.id}/sanction`, { action });
+        toast({ title: "Sanción aplicada", description: "El reporte fue actualizado." });
+        refetchReports();
+        refetchItems();
+        refetchUsers();
+      } catch (error: any) {
+        toast({
+          title: "No se pudo aplicar la sanción",
+          description: error?.message ?? "Revisa la conexión e inténtalo de nuevo.",
+          variant: "destructive",
+        });
+      }
+    },
+    [refetchItems, refetchReports, refetchUsers, toast],
+  );
+
   useEffect(() => {
-    if (!isUsersError && !isItemsError && !isMetricsError) {
+    if (!isUsersError && !isItemsError && !isMetricsError && !isReportsError) {
       return;
     }
 
     const description =
-      (usersError || itemsError || metricsError)?.message ?? "No pudimos cargar la consola de administración.";
+      (usersError || itemsError || metricsError || reportsError)?.message ??
+      "No pudimos cargar la consola de administración.";
     toast({
       title: "Error al cargar datos de administración",
       description,
       variant: "destructive",
     });
-  }, [isItemsError, isMetricsError, isUsersError, itemsError, metricsError, toast, usersError]);
+  }, [
+    isItemsError,
+    isMetricsError,
+    isReportsError,
+    isUsersError,
+    itemsError,
+    metricsError,
+    reportsError,
+    toast,
+    usersError,
+  ]);
 
-  const isAnyLoading = isLoadingItems || isLoadingUsers || isLoadingMetrics;
+  const isAnyLoading = isLoadingItems || isLoadingUsers || isLoadingMetrics || isLoadingReports;
   const isTableLoading = isLoadingItems || isLoadingUsers;
 
   return (
@@ -572,6 +681,129 @@ const AdminDashboard = () => {
               </CardContent>
             </Card>
           </div>
+
+          <Card className="shadow-sm">
+            <CardHeader className="space-y-1">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <CardTitle>Reportes de abuso</CardTitle>
+                  <CardDescription>Gestiona denuncias de usuarios y publicaciones.</CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Select
+                    value={reportStatusFilter}
+                    onValueChange={(value) =>
+                      setReportStatusFilter(value as AbuseReportStatus | "ALL")
+                    }
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {reportStatusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button variant="outline" size="sm" onClick={() => refetchReports()} disabled={isLoadingReports}>
+                    {isLoadingReports ? <Loader2 className="h-4 w-4 animate-spin" /> : "Actualizar"}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(isLoadingReports && reports.length === 0) || (isReportsError && reports.length === 0) ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                  {isLoadingReports ? <Loader2 className="h-6 w-6 animate-spin" /> : <AlertCircle className="h-6 w-6" />}
+                  <p>
+                    {isLoadingReports
+                      ? "Cargando reportes..."
+                      : reportsError?.message ?? "No pudimos cargar los reportes."}
+                  </p>
+                </div>
+              ) : null}
+
+              {!isLoadingReports && !isReportsError && (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Motivo</TableHead>
+                      <TableHead>Denunciante</TableHead>
+                      <TableHead>Objetivo</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Creado</TableHead>
+                      <TableHead>Resuelto</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reports.map((report) => {
+                      const isClosed = report.status !== "PENDING";
+                      const targetLabel = report.reportedItemTitle
+                        ? `Publicación: ${report.reportedItemTitle}`
+                        : report.reportedUserName
+                          ? `Usuario: ${report.reportedUserName}`
+                          : "Sin objetivo";
+
+                      return (
+                        <TableRow key={report.id}>
+                          <TableCell className="max-w-[280px]">
+                            <div className="flex flex-col">
+                              <span className="font-medium text-foreground line-clamp-2">{report.reason}</span>
+                              <span className="text-xs text-muted-foreground">ID: {report.id.slice(0, 8)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {report.reporterName ?? report.reporterId?.slice(0, 8) ?? "–"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{targetLabel}</TableCell>
+                          <TableCell>
+                            <Badge variant={getReportBadgeVariant(report.status)}>{report.status}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{formatRelativeDate(report.createdAt)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {report.resolvedAt ? formatRelativeDate(report.resolvedAt) : "–"}
+                          </TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={isClosed}
+                              onClick={() => handleResolveReport(report)}
+                            >
+                              Resolver
+                            </Button>
+                            {report.reportedUserId ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isClosed}
+                                onClick={() => handleSanctionReport(report, "SUSPEND_USER")}
+                              >
+                                Suspender usuario
+                              </Button>
+                            ) : null}
+                            {report.reportedItemId ? (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={isClosed}
+                                onClick={() => handleSanctionReport(report, "REMOVE_ITEM")}
+                              >
+                                Eliminar publicación
+                              </Button>
+                            ) : null}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
 
           <Separator />
 
