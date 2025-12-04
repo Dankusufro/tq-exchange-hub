@@ -41,7 +41,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !userAccount.isSuspended();
     }
 
     @Override
@@ -51,7 +51,7 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return !userAccount.isSuspended();
     }
 
     public UserAccount getUserAccount() {

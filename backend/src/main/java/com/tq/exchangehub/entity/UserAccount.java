@@ -39,6 +39,9 @@ public class UserAccount {
     @Column(nullable = false)
     private Role role = Role.USER;
 
+    @Column(name = "is_suspended", nullable = false)
+    private boolean suspended = false;
+
     public UUID getId() {
         return id;
     }
@@ -85,5 +88,13 @@ public class UserAccount {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public boolean isSuspended() {
+        return suspended;
+    }
+
+    public void setSuspended(boolean suspended) {
+        this.suspended = suspended;
     }
 }
