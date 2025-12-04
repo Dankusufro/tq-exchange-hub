@@ -1,5 +1,6 @@
 package com.tq.exchangehub.controller;
 
+import com.tq.exchangehub.exception.AdminReportException;
 import com.tq.exchangehub.service.AdminReportService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,14 +35,20 @@ public class AdminReportController {
             @RequestParam("period")
             @Pattern(regexp = "\\d{4}-\\d{2}", message = "El periodo es obligatorio en formato YYYY-MM")
                     String period) {
-        byte[] pdfContent = adminReportService.generateMonthlyReport(period);
+        try {
+            byte[] pdfContent = adminReportService.generateMonthlyReport(period);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(ContentDisposition.attachment()
-                .filename("reporte-" + period + ".pdf")
-                .build());
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("reporte-" + period + ".pdf")
+                    .build());
 
-        return ResponseEntity.ok().headers(headers).body(pdfContent);
+            return ResponseEntity.ok().headers(headers).body(pdfContent);
+        } catch (AdminReportException exception) {
+            return ResponseEntity.status(exception.getStatus())
+                    .contentType(MediaType.TEXT_PLAIN)
+                    .body(exception.getMessage());
+        }
     }
 }

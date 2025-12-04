@@ -2,6 +2,7 @@ package com.tq.exchangehub.service;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,6 +49,7 @@ class AdminReportServiceTest {
         byte[] pdfContent = adminReportService.generateMonthlyReport("2024-05");
 
         assertNotEquals(0, pdfContent.length);
+        assertTrue(new String(pdfContent, 0, 5).startsWith("%PDF-"));
 
         OffsetDateTime expectedStart = YearMonth.of(2024, 5).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
         OffsetDateTime expectedEnd = expectedStart.plusMonths(1);
