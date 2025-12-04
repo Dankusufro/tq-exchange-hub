@@ -10,6 +10,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import java.nio.charset.StandardCharsets;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,7 +49,7 @@ public class AdminReportController {
         } catch (AdminReportException exception) {
             return ResponseEntity.status(exception.getStatus())
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(exception.getMessage());
+                    .body(exception.getMessage().getBytes(StandardCharsets.UTF_8));
         }
     }
 }
