@@ -17,6 +17,7 @@ public class ItemDto {
     private Boolean available;
     private Boolean service;
     private String location;
+    private String moderationStatus;
     private List<String> images;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
@@ -100,6 +101,14 @@ public class ItemDto {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getModerationStatus() {
+        return moderationStatus;
+    }
+
+    public void setModerationStatus(String moderationStatus) {
+        this.moderationStatus = moderationStatus;
     }
 
     public List<String> getImages() {

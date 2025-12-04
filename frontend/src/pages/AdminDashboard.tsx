@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertCircle, BarChart3, LayoutDashboard, Loader2, Shield, UserCog } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 
 interface AdminUser {
   id: string;
@@ -34,6 +34,7 @@ interface AdminItem {
   available: boolean | null;
   service: boolean | null;
   location: string | null;
+  moderationStatus?: "PENDING" | "APPROVED" | "DISABLED";
   images: string[];
   createdAt: string;
   updatedAt: string;
@@ -95,7 +96,9 @@ const AdminDashboard = () => {
 
   const summaryCards = useMemo(() => {
     const totalItems = items.length;
-    const activeItems = items.filter((item) => item.available !== false).length;
+    const activeItems = items.filter(
+      (item) => item.available !== false && item.moderationStatus !== "DISABLED",
+    ).length;
 
     return [
       {
@@ -162,6 +165,48 @@ const AdminDashboard = () => {
       activos: { label: "Activos", color: "hsl(var(--chart-3))" },
     }),
     [],
+  );
+
+  const handleDisableItem = useCallback(
+    async (item: AdminItem) => {
+      const confirmed = window.confirm(`¿Deshabilitar la publicación "${item.title}"?`);
+      if (!confirmed) return;
+
+      try {
+        await apiClient.patch(`/api/admin/items/${item.id}/disable`);
+        toast({ title: "Publicación deshabilitada", description: "El ítem ya no estará disponible." });
+        refetchItems();
+      } catch (error: any) {
+        toast({
+          title: "No se pudo deshabilitar",
+          description: error?.message ?? "Intenta nuevamente más tarde.",
+          variant: "destructive",
+        });
+      }
+    },
+    [refetchItems, toast],
+  );
+
+  const handleDeleteItem = useCallback(
+    async (item: AdminItem) => {
+      const confirmed = window.confirm(
+        `¿Eliminar definitivamente la publicación "${item.title}"? Esta acción no se puede deshacer.`,
+      );
+      if (!confirmed) return;
+
+      try {
+        await apiClient.delete(`/api/admin/items/${item.id}`);
+        toast({ title: "Publicación eliminada", description: "El ítem fue eliminado del catálogo." });
+        refetchItems();
+      } catch (error: any) {
+        toast({
+          title: "No se pudo eliminar",
+          description: error?.message ?? "Revisa la conexión e inténtalo otra vez.",
+          variant: "destructive",
+        });
+      }
+    },
+    [refetchItems, toast],
   );
 
   useEffect(() => {
@@ -464,8 +509,10 @@ const AdminDashboard = () => {
                         <TableHead>Título</TableHead>
                         <TableHead>Tipo</TableHead>
                         <TableHead>Estado</TableHead>
+                        <TableHead>Moderación</TableHead>
                         <TableHead>Ubicación</TableHead>
                         <TableHead>Creación</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -487,10 +534,36 @@ const AdminDashboard = () => {
                               {item.available === false ? "No disponible" : "Activa"}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                item.moderationStatus === "DISABLED"
+                                  ? "destructive"
+                                  : item.moderationStatus === "PENDING"
+                                    ? "secondary"
+                                    : "default"
+                              }
+                            >
+                              {item.moderationStatus ?? "DESCONOCIDO"}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {item.location ?? "Sin ubicación"}
                           </TableCell>
                           <TableCell className="text-muted-foreground">{formatRelativeDate(item.createdAt)}</TableCell>
+                          <TableCell className="text-right space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={item.moderationStatus === "DISABLED"}
+                              onClick={() => handleDisableItem(item)}
+                            >
+                              Deshabilitar
+                            </Button>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteItem(item)}>
+                              Eliminar
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

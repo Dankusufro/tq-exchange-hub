@@ -4,6 +4,8 @@ import com.tq.exchangehub.dto.AdminMetricsDto;
 import com.tq.exchangehub.dto.AdminUserDto;
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.TimeSeriesPointDto;
+import com.tq.exchangehub.entity.Item;
+import com.tq.exchangehub.entity.ModerationStatus;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.entity.UserAccount;
@@ -17,6 +19,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
@@ -72,6 +75,23 @@ public class AdminService {
                 now);
 
         return new AdminMetricsDto(totalUsers, activeUsers, completedTrades, activeTrades, tradeActivity, signupsActivity);
+    }
+
+    public void disableItem(UUID itemId) {
+        Item item = itemRepository
+                .findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+        item.setModerationStatus(ModerationStatus.DISABLED);
+        item.setAvailable(false);
+        item.setUpdatedAt(OffsetDateTime.now());
+        itemRepository.save(item);
+    }
+
+    public void deleteItem(UUID itemId) {
+        Item item = itemRepository
+                .findById(itemId)
+                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+        itemRepository.delete(item);
     }
 
     private List<TimeSeriesPointDto> buildHourlySeries(List<OffsetDateTime> timestamps, OffsetDateTime now) {

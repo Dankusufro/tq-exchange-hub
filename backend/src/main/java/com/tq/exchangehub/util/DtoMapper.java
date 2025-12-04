@@ -63,6 +63,7 @@ public final class DtoMapper {
         dto.setAvailable(item.getAvailable());
         dto.setService(item.getService());
         dto.setLocation(item.getLocation());
+        dto.setModerationStatus(item.getModerationStatus() != null ? item.getModerationStatus().name() : null);
         dto.setImages(item.getImages());
         dto.setWishlist(item.getWishlist());
         dto.setCreatedAt(item.getCreatedAt());
