@@ -214,6 +214,29 @@ public class TradeService {
     }
 
     private TradeDto applyStatus(Trade trade, TradeStatus status, UUID actorProfileId) {
+        Item ownerItem = trade.getOwnerItem();
+        Item requesterItem = trade.getRequesterItem();
+
+        if (status == TradeStatus.ACCEPTED || status == TradeStatus.COMPLETED) {
+            if (ownerItem != null) {
+                ownerItem.setAvailable(false);
+                itemRepository.save(ownerItem);
+            }
+            if (requesterItem != null) {
+                requesterItem.setAvailable(false);
+                itemRepository.save(requesterItem);
+            }
+        } else if (status == TradeStatus.CANCELLED || status == TradeStatus.REJECTED) {
+            if (ownerItem != null) {
+                ownerItem.setAvailable(true);
+                itemRepository.save(ownerItem);
+            }
+            if (requesterItem != null) {
+                requesterItem.setAvailable(true);
+                itemRepository.save(requesterItem);
+            }
+        }
+
         trade.setStatus(status);
         trade.setUpdatedAt(OffsetDateTime.now());
         Trade saved = tradeRepository.save(trade);
