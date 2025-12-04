@@ -389,7 +389,7 @@ const AdminDashboard = () => {
 
     try {
       const params = new URLSearchParams({ period: reportPeriod });
-      const blob = await apiClient.get<Blob>(`/api/admin/reports?${params.toString()}`, {
+      const blob = await apiClient.get<Blob>(`/api/admin/reports/monthly?${params.toString()}`, {
         responseType: "blob",
       });
 
