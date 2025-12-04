@@ -63,4 +63,17 @@ public interface TradeRepository extends JpaRepository<Trade, UUID> {
                     + " AND (t.owner.id = :profileId OR t.requester.id = :profileId)")
     Optional<Trade> findByIdForParticipant(
             @Param("tradeId") UUID tradeId, @Param("profileId") UUID profileId);
+
+    @Query(
+            "SELECT t.status AS status, t.owner.location AS ownerLocation, t.requester.location AS requesterLocation"
+                    + " FROM Trade t")
+    List<TradeStatusLocationView> findStatusAndLocations();
+
+    interface TradeStatusLocationView {
+        TradeStatus getStatus();
+
+        String getOwnerLocation();
+
+        String getRequesterLocation();
+    }
 }
