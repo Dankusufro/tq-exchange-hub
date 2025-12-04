@@ -5,6 +5,7 @@ import com.tq.exchangehub.dto.ItemRequest;
 import com.tq.exchangehub.dto.ItemSummaryDto;
 import com.tq.exchangehub.entity.Category;
 import com.tq.exchangehub.entity.Item;
+import com.tq.exchangehub.entity.ModerationStatus;
 import com.tq.exchangehub.entity.Profile;
 import com.tq.exchangehub.repository.CategoryRepository;
 import com.tq.exchangehub.repository.ItemRepository;
@@ -94,7 +95,9 @@ public class ItemService {
     public Page<ItemSummaryDto> findHighlighted(int page, int size) {
         Pageable pageable =
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt", "createdAt"));
-        return itemRepository.findByAvailableTrueOrAvailableIsNull(pageable).map(DtoMapper::toItemSummaryDto);
+        return itemRepository
+                .findApprovedAvailable(ModerationStatus.APPROVED, pageable)
+                .map(DtoMapper::toItemSummaryDto);
     }
 
     public Page<ItemSummaryDto> search(String query, UUID categoryId, int page, int size) {
@@ -110,7 +113,7 @@ public class ItemService {
         }
 
         return itemRepository
-                .searchAvailable(normalizedQuery, categoryId, pageable)
+                .searchAvailable(normalizedQuery, categoryId, ModerationStatus.APPROVED, pageable)
                 .map(DtoMapper::toItemSummaryDto);
     }
 }
