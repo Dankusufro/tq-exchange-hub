@@ -33,6 +33,9 @@ public final class DtoMapper {
         dto.setAvatarUrl(profile.getAvatarUrl());
         dto.setLocation(profile.getLocation());
         dto.setPhone(profile.getPhone());
+        if (profile.getAccount() != null) {
+            dto.setRole(profile.getAccount().getRole());
+        }
         dto.setRating(profile.getRating());
         dto.setTotalTrades(profile.getTotalTrades()); // solo copia de la entidad
         dto.setCreatedAt(profile.getCreatedAt());

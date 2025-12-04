@@ -1,5 +1,6 @@
 package com.tq.exchangehub.dto;
 
+import com.tq.exchangehub.entity.Role;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ public class ProfileDto {
     private String avatarUrl;
     private String location;
     private String phone;
+    private Role role;
     private Double rating;
     private Integer totalTrades;
     private OffsetDateTime createdAt;
@@ -62,6 +64,14 @@ public class ProfileDto {
 
     public void setPhone(String phone) {
         this.phone = phone;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 
     public Double getRating() {
