@@ -1,6 +1,5 @@
 package com.tq.exchangehub.service;
 
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -14,6 +13,8 @@ import com.tq.exchangehub.repository.UserAccountRepository;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,8 +49,11 @@ class AdminReportServiceTest {
 
         byte[] pdfContent = adminReportService.generateMonthlyReport("2024-05");
 
-        assertNotEquals(0, pdfContent.length);
+        assertTrue(pdfContent.length > 0);
         assertTrue(new String(pdfContent, 0, 5).startsWith("%PDF-"));
+        try (PDDocument document = Loader.loadPDF(pdfContent)) {
+            assertTrue(document.getNumberOfPages() > 0);
+        }
 
         OffsetDateTime expectedStart = YearMonth.of(2024, 5).atDay(1).atStartOfDay().atOffset(ZoneOffset.UTC);
         OffsetDateTime expectedEnd = expectedStart.plusMonths(1);
