@@ -7,6 +7,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.tq.exchangehub.dto.AdminMetricsDto;
+import com.tq.exchangehub.dto.AdminRegionMetricsDto;
 import com.tq.exchangehub.entity.Trade;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.entity.UserAccount;
@@ -56,10 +57,13 @@ class AdminServiceTest {
 
         when(userAccountRepository.count()).thenReturn(5L);
         when(tradeRepository.countByStatus(TradeStatus.COMPLETED)).thenReturn(3L);
+        when(tradeRepository.countByStatus(TradeStatus.CANCELLED)).thenReturn(1L);
         when(tradeRepository.countByStatus(TradeStatus.PENDING)).thenReturn(2L);
         when(tradeRepository.countByStatus(TradeStatus.ACCEPTED)).thenReturn(1L);
         when(tradeRepository.findByCreatedAtAfter(any())).thenReturn(List.of(trade));
         when(userAccountRepository.findByCreatedAtAfter(any())).thenReturn(List.of(account));
+        when(tradeRepository.findStatusAndLocations())
+                .thenReturn(List.of(new TradeViewStub(TradeStatus.COMPLETED, "Region A, Comuna 1", "")));
         when(simpUserRegistry.getUsers()).thenReturn(Set.of(mock(SimpUser.class), mock(SimpUser.class)));
 
         AdminMetricsDto metrics = adminService.getMetrics();
@@ -68,6 +72,10 @@ class AdminServiceTest {
         assertEquals(2, metrics.activeUsers());
         assertEquals(3L, metrics.completedTrades());
         assertEquals(3L, metrics.activeTrades());
+        assertEquals(1L, metrics.cancelledTrades());
+        assertEquals(7.5, metrics.ecologicalImpactKg());
+        assertEquals(75.0, metrics.successRate());
+        assertEquals(25.0, metrics.cancellationRate());
 
         String tradeHourLabel = DateTimeFormatter.ofPattern("HH:mm").format(recentTradeTime);
         String signupHourLabel = DateTimeFormatter.ofPattern("HH:mm").format(recentSignup);
@@ -76,5 +84,28 @@ class AdminServiceTest {
                 .anyMatch(point -> point.label().equals(tradeHourLabel) && point.value() == 1));
         assertTrue(metrics.signupsActivity().stream()
                 .anyMatch(point -> point.label().equals(signupHourLabel) && point.value() == 1));
+
+        AdminRegionMetricsDto regionMetrics = metrics.locationMetrics().getFirst();
+        assertEquals("Region A", regionMetrics.region());
+        assertEquals("Comuna 1", regionMetrics.commune());
+        assertEquals(1L, regionMetrics.totalTrades());
+    }
+
+    private record TradeViewStub(TradeStatus status, String ownerLocation, String requesterLocation)
+            implements TradeRepository.TradeStatusLocationView {
+        @Override
+        public TradeStatus getStatus() {
+            return status;
+        }
+
+        @Override
+        public String getOwnerLocation() {
+            return ownerLocation;
+        }
+
+        @Override
+        public String getRequesterLocation() {
+            return requesterLocation;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.tq.exchangehub.service;
 
 import com.tq.exchangehub.dto.AdminMetricsDto;
+import com.tq.exchangehub.dto.AdminRegionMetricsDto;
 import com.tq.exchangehub.dto.AdminUserDto;
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.dto.TimeSeriesPointDto;
@@ -16,6 +17,7 @@ import com.tq.exchangehub.util.DtoMapper;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +28,10 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AdminService {
+
+    private static final String DEFAULT_REGION = "Sin región";
+    private static final String DEFAULT_COMMUNE = "Sin comuna";
+    private static final double ECO_IMPACT_PER_TRADE_KG = 2.5;
 
     private final UserAccountRepository userAccountRepository;
     private final ItemRepository itemRepository;
@@ -59,6 +65,7 @@ public class AdminService {
         long totalUsers = userAccountRepository.count();
         long activeUsers = simpUserRegistry.getUsers().size();
         long completedTrades = tradeRepository.countByStatus(TradeStatus.COMPLETED);
+        long cancelledTrades = tradeRepository.countByStatus(TradeStatus.CANCELLED);
         long activeTrades = tradeRepository.countByStatus(TradeStatus.PENDING)
                 + tradeRepository.countByStatus(TradeStatus.ACCEPTED);
 
@@ -74,7 +81,26 @@ public class AdminService {
                         .toList(),
                 now);
 
-        return new AdminMetricsDto(totalUsers, activeUsers, completedTrades, activeTrades, tradeActivity, signupsActivity);
+        List<AdminRegionMetricsDto> locationMetrics = buildLocationMetrics(
+                tradeRepository.findStatusAndLocations());
+
+        long totalClosed = completedTrades + cancelledTrades;
+        double successRate = totalClosed == 0 ? 0 : ((double) completedTrades / totalClosed) * 100;
+        double cancellationRate = totalClosed == 0 ? 0 : ((double) cancelledTrades / totalClosed) * 100;
+        double ecologicalImpactKg = completedTrades * ECO_IMPACT_PER_TRADE_KG;
+
+        return new AdminMetricsDto(
+                totalUsers,
+                activeUsers,
+                completedTrades,
+                cancelledTrades,
+                activeTrades,
+                tradeActivity,
+                signupsActivity,
+                ecologicalImpactKg,
+                successRate,
+                cancellationRate,
+                locationMetrics);
     }
 
     public void disableItem(UUID itemId) {
@@ -114,6 +140,57 @@ public class AdminService {
                 .toList();
     }
 
+    private List<AdminRegionMetricsDto> buildLocationMetrics(
+            List<TradeRepository.TradeStatusLocationView> trades) {
+        Map<LocationKey, LocationAggregation> aggregation = new LinkedHashMap<>();
+
+        trades.forEach(trade -> {
+            incrementLocation(aggregation, trade.getOwnerLocation(), trade.getStatus());
+            incrementLocation(aggregation, trade.getRequesterLocation(), trade.getStatus());
+        });
+
+        return aggregation.entrySet().stream()
+                .map(entry -> new AdminRegionMetricsDto(
+                        entry.getKey().region,
+                        entry.getKey().commune,
+                        entry.getValue().completedTrades,
+                        entry.getValue().cancelledTrades,
+                        entry.getValue().completedTrades + entry.getValue().cancelledTrades))
+                .sorted(Comparator.comparingLong(AdminRegionMetricsDto::totalTrades).reversed())
+                .toList();
+    }
+
+    private void incrementLocation(
+            Map<LocationKey, LocationAggregation> aggregation, String location, TradeStatus status) {
+        LocationKey key = parseLocation(location);
+        LocationAggregation current = aggregation.computeIfAbsent(key, unused -> new LocationAggregation());
+
+        if (status == TradeStatus.COMPLETED) {
+            current.completedTrades++;
+        } else if (status == TradeStatus.CANCELLED) {
+            current.cancelledTrades++;
+        }
+    }
+
+    private LocationKey parseLocation(String location) {
+        if (location == null || location.isBlank()) {
+            return new LocationKey(DEFAULT_REGION, DEFAULT_COMMUNE);
+        }
+
+        String[] parts = location.split(",");
+        String region = parts[0].trim();
+        String commune = parts.length > 1 ? parts[1].trim() : DEFAULT_COMMUNE;
+
+        if (region.isBlank()) {
+            region = DEFAULT_REGION;
+        }
+        if (commune.isBlank()) {
+            commune = DEFAULT_COMMUNE;
+        }
+
+        return new LocationKey(region, commune);
+    }
+
     private AdminUserDto toAdminUserDto(UserAccount account) {
         return new AdminUserDto(
                 account.getId(),
@@ -122,4 +199,11 @@ public class AdminService {
                 account.getProfile() != null ? account.getProfile().getDisplayName() : null,
                 account.getCreatedAt());
     }
+
+    private static class LocationAggregation {
+        private long completedTrades = 0;
+        private long cancelledTrades = 0;
+    }
+
+    private record LocationKey(String region, String commune) {}
 }

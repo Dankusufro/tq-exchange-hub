@@ -17,10 +17,12 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  Leaf,
   LayoutDashboard,
   Loader2,
+  MapPin,
   RefreshCcw,
-  Shield,
+  TrendingUp,
   UserCog,
   XCircle,
 } from "lucide-react";
@@ -69,9 +71,22 @@ interface AdminMetrics {
   totalUsers: number;
   activeUsers: number;
   completedTrades: number;
+  cancelledTrades: number;
   activeTrades: number;
   tradeActivity: TimeSeriesPoint[];
   signupsActivity: TimeSeriesPoint[];
+  ecologicalImpactKg: number;
+  successRate: number;
+  cancellationRate: number;
+  locationMetrics: RegionMetrics[];
+}
+
+interface RegionMetrics {
+  region: string;
+  commune: string;
+  completedTrades: number;
+  cancelledTrades: number;
+  totalTrades: number;
 }
 
 type AbuseReportStatus = "PENDING" | "RESOLVED" | "SANCTIONED";
@@ -165,16 +180,22 @@ const AdminDashboard = () => {
         icon: LayoutDashboard,
       },
       {
+        label: "Éxito de trueques",
+        value: metrics ? `${metrics.successRate.toFixed(1)}%` : "–",
+        helper: metrics ? `${metrics.cancellationRate.toFixed(1)}% cancelados` : "–",
+        icon: TrendingUp,
+      },
+      {
         label: "Publicaciones totales",
         value: totalItems,
         helper: `${activeItems} disponibles para trueque`,
         icon: BarChart3,
       },
       {
-        label: "Interés acumulado",
-        value: items.reduce((total, item) => total + (item.wishlist?.length ?? 0), 0),
-        helper: "Deseos totales en publicaciones",
-        icon: Shield,
+        label: "Impacto ecológico",
+        value: metrics ? `${metrics.ecologicalImpactKg.toFixed(1)} kg CO₂e` : "–",
+        helper: "Ahorro estimado por reutilización",
+        icon: Leaf,
       },
     ];
   }, [items, metrics]);
@@ -229,6 +250,27 @@ const AdminDashboard = () => {
     [metrics],
   );
 
+  const tradeOutcomeSeries = useMemo(
+    () => [
+      {
+        name: "Resultados",
+        completados: metrics?.completedTrades ?? 0,
+        cancelados: metrics?.cancelledTrades ?? 0,
+      },
+    ],
+    [metrics],
+  );
+
+  const regionMetrics = useMemo(() => {
+    if (!metrics?.locationMetrics) return [];
+
+    return metrics.locationMetrics.map((entry) => ({
+      ...entry,
+      successRate:
+        entry.totalTrades > 0 ? Number(((entry.completedTrades / entry.totalTrades) * 100).toFixed(1)) : 0,
+    }));
+  }, [metrics]);
+
   const activityChartConfig = useMemo(
     () => ({
       trades: { label: "Trueques", color: "hsl(var(--chart-1))" },
@@ -241,6 +283,14 @@ const AdminDashboard = () => {
     () => ({
       completados: { label: "Completados", color: "hsl(var(--chart-1))" },
       activos: { label: "Activos", color: "hsl(var(--chart-3))" },
+    }),
+    [],
+  );
+
+  const tradeOutcomeConfig = useMemo(
+    () => ({
+      completados: { label: "Completados", color: "hsl(var(--chart-1))" },
+      cancelados: { label: "Cancelados", color: "hsl(var(--chart-4))" },
     }),
     [],
   );
@@ -687,6 +737,109 @@ const AdminDashboard = () => {
                     </ChartContainer>
                   </div>
                 ) : null}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Card className="shadow-sm lg:col-span-3">
+              <CardHeader className="space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle>Éxitos vs cancelaciones</CardTitle>
+                    <CardDescription>Resultado de los trueques cerrados recientemente.</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refetchMetrics()} disabled={isLoadingMetrics}>
+                    {isLoadingMetrics ? <Loader2 className="h-4 w-4 animate-spin" /> : "Refrescar"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!isLoadingMetrics && !isMetricsError && metrics ? (
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <p className="text-muted-foreground">Tasa de éxito</p>
+                      <p className="text-3xl font-bold text-foreground">{metrics.successRate.toFixed(1)}%</p>
+                      <p className="text-xs text-muted-foreground">{metrics.completedTrades} completados</p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <p className="text-muted-foreground">Cancelaciones</p>
+                      <p className="text-3xl font-bold text-foreground">{metrics.cancellationRate.toFixed(1)}%</p>
+                      <p className="text-xs text-muted-foreground">{metrics.cancelledTrades} cancelados</p>
+                    </div>
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <p className="text-muted-foreground">Impacto ecológico</p>
+                      <p className="text-3xl font-bold text-foreground">{metrics.ecologicalImpactKg.toFixed(1)} kg</p>
+                      <p className="text-xs text-muted-foreground">CO₂e evitados en total</p>
+                    </div>
+                  </div>
+                ) : null}
+
+                {!isLoadingMetrics && !isMetricsError && metrics ? (
+                  <ChartContainer config={tradeOutcomeConfig} className="h-[260px]">
+                    <BarChart data={tradeOutcomeSeries} margin={{ left: 12, right: 12 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={8} />
+                      <YAxis allowDecimals={false} tickLine={false} axisLine={false} tickMargin={8} width={36} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="completados" stackId="status" fill="var(--color-completados)" radius={6} />
+                      <Bar dataKey="cancelados" stackId="status" fill="var(--color-cancelados)" radius={6} />
+                      <ChartLegend
+                        verticalAlign="bottom"
+                        content={<ChartLegendContent className="-mb-2 mt-2 text-muted-foreground" />}
+                      />
+                    </BarChart>
+                  </ChartContainer>
+                ) : null}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-sm lg:col-span-2">
+              <CardHeader className="space-y-1">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <div>
+                      <CardTitle>Actividad por región</CardTitle>
+                      <CardDescription>Comunas con mayor volumen de trueques cerrados.</CardDescription>
+                    </div>
+                  </div>
+                  <Badge variant="outline">{regionMetrics.length} zonas</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {regionMetrics.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+                    <AlertCircle className="h-5 w-5" />
+                    <p>No hay datos regionales disponibles.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-4 gap-2 text-xs font-medium text-muted-foreground">
+                      <span>Región</span>
+                      <span>Comuna</span>
+                      <span className="text-right">Total</span>
+                      <span className="text-right">Éxito</span>
+                    </div>
+                    <div className="space-y-2">
+                      {regionMetrics.slice(0, 6).map((entry) => (
+                        <div
+                          key={`${entry.region}-${entry.commune}`}
+                          className="grid grid-cols-4 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm"
+                        >
+                          <span className="truncate font-medium text-foreground" title={entry.region}>
+                            {entry.region}
+                          </span>
+                          <span className="truncate text-muted-foreground" title={entry.commune}>
+                            {entry.commune}
+                          </span>
+                          <span className="text-right font-semibold">{entry.totalTrades}</span>
+                          <span className="text-right text-emerald-600">{entry.successRate}%</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

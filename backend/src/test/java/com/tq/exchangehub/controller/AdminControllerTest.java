@@ -67,9 +67,14 @@ class AdminControllerTest {
                 10L,
                 2L,
                 5L,
+                1L,
                 3L,
                 List.of(new TimeSeriesPointDto("10:00", 2L)),
-                List.of(new TimeSeriesPointDto("10:00", 1L)));
+                List.of(new TimeSeriesPointDto("10:00", 1L)),
+                12.5,
+                83.3,
+                16.7,
+                List.of());
 
         when(adminService.getMetrics()).thenReturn(metrics);
 
