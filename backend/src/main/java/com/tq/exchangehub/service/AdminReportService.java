@@ -7,6 +7,7 @@ import com.tq.exchangehub.repository.ItemRepository;
 import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.repository.UserAccountRepository;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -142,6 +143,8 @@ public class AdminReportService {
             }
 
             return pdfContent;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
