@@ -1,6 +1,8 @@
 package com.tq.exchangehub.repository;
 
 import com.tq.exchangehub.entity.UserAccount;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -12,4 +14,6 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> 
 
     @EntityGraph(attributePaths = "profile")
     Optional<UserAccount> findByProfileId(UUID profileId);
+
+    List<UserAccount> findByCreatedAtAfter(OffsetDateTime createdAt);
 }

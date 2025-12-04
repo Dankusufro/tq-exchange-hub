@@ -1,5 +1,6 @@
 package com.tq.exchangehub.controller;
 
+import com.tq.exchangehub.dto.AdminMetricsDto;
 import com.tq.exchangehub.dto.AdminUserDto;
 import com.tq.exchangehub.dto.ItemDto;
 import com.tq.exchangehub.service.AdminService;
@@ -33,5 +34,10 @@ public class AdminController {
     @GetMapping("/items")
     public ResponseEntity<List<ItemDto>> listItems() {
         return ResponseEntity.ok(adminService.getItems());
+    }
+
+    @GetMapping("/metrics")
+    public ResponseEntity<AdminMetricsDto> getMetrics() {
+        return ResponseEntity.ok(adminService.getMetrics());
     }
 }
