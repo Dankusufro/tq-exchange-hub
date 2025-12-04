@@ -2,6 +2,7 @@ package com.tq.exchangehub.service;
 
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.tq.exchangehub.entity.TradeStatus;
+import com.tq.exchangehub.exception.AdminReportException;
 import com.tq.exchangehub.repository.ItemRepository;
 import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.repository.UserAccountRepository;
@@ -11,11 +12,15 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AdminReportService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminReportService.class);
     private static final DateTimeFormatter PERIOD_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM");
 
     private final UserAccountRepository userAccountRepository;
@@ -119,10 +124,36 @@ public class AdminReportService {
             builder.useFastMode();
             builder.withHtmlContent(html, "");
             builder.toStream(outputStream);
-            builder.run();
-            return outputStream.toByteArray();
-        } catch (Exception exception) {
-            throw new IllegalStateException("No se pudo generar el reporte PDF", exception);
+            try {
+                builder.run();
+            } catch (Exception exception) {
+                log.error("Error al renderizar el reporte PDF: {}", exception.getMessage());
+                throw new AdminReportException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "No se pudo generar el reporte en PDF. Inténtalo más tarde.",
+                        exception);
+            }
+
+            byte[] pdfContent = outputStream.toByteArray();
+            if (!isValidPdf(pdfContent)) {
+                String message = "El reporte generado no es un PDF válido.";
+                log.error(message);
+                throw new AdminReportException(HttpStatus.BAD_REQUEST, message);
+            }
+
+            return pdfContent;
         }
+    }
+
+    private boolean isValidPdf(byte[] content) {
+        if (content == null || content.length < 5) {
+            return false;
+        }
+
+        return content[0] == '%'
+                && content[1] == 'P'
+                && content[2] == 'D'
+                && content[3] == 'F'
+                && content[4] == '-';
     }
 }
