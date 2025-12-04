@@ -28,6 +28,8 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AdminService {
@@ -118,7 +120,7 @@ public class AdminService {
     public void disableItem(UUID itemId) {
         Item item = itemRepository
                 .findById(itemId)
-                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found"));
         item.setModerationStatus(ModerationStatus.DISABLED);
         item.setAvailable(false);
         item.setUpdatedAt(OffsetDateTime.now());
@@ -128,7 +130,14 @@ public class AdminService {
     public void deleteItem(UUID itemId) {
         Item item = itemRepository
                 .findById(itemId)
-                .orElseThrow(() -> new IllegalArgumentException("Item not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Item not found"));
+
+        boolean hasTrades = tradeRepository.existsByOwnerItemIdOrRequesterItemId(itemId, itemId);
+        if (hasTrades) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "No se puede eliminar un artículo con intercambios asociados. Cancela o deshabilita la publicación.");
+        }
         itemRepository.delete(item);
     }
 
