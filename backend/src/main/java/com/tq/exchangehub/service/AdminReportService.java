@@ -1,6 +1,5 @@
 package com.tq.exchangehub.service;
 
-import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.tq.exchangehub.entity.TradeStatus;
 import com.tq.exchangehub.exception.AdminReportException;
 import com.tq.exchangehub.repository.ItemRepository;
@@ -13,6 +12,11 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import com.lowagie.text.Document;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfWriter;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.slf4j.Logger;
@@ -51,8 +55,7 @@ public class AdminReportService {
                 tradeRepository.countByStatusAndUpdatedAtBetween(TradeStatus.CANCELLED, start, end);
         long newItems = itemRepository.countByCreatedAtBetween(start, end);
 
-        String html = buildHtml(month, newUsers, completedTrades, cancelledTrades, newItems);
-        return renderPdf(html);
+        return renderPdf(month, newUsers, completedTrades, cancelledTrades, newItems);
     }
 
     private YearMonth parsePeriod(String period) {
@@ -67,76 +70,33 @@ public class AdminReportService {
         }
     }
 
-    private String buildHtml(YearMonth month, long newUsers, long completedTrades, long cancelledTrades, long newItems) {
+    private byte[] renderPdf(
+            YearMonth month, long newUsers, long completedTrades, long cancelledTrades, long newItems) {
         String monthLabel = month.format(DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(new Locale("es")));
 
-        return String.format(
-                """
-                        <html>
-                          <head>
-                            <style>
-                              body { font-family: Arial, sans-serif; color: #1F2937; }
-                              h1 { color: #111827; }
-                              .header { margin-bottom: 12px; }
-                              .metrics { width: 100%; border-collapse: collapse; margin-top: 12px; }
-                              .metrics th { text-align: left; background: #F3F4F6; padding: 8px; }
-                              .metrics td { padding: 8px; border-bottom: 1px solid #E5E7EB; }
-                              .badge { background: #2563EB; color: white; padding: 4px 8px; border-radius: 6px; }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="header">
-                              <h1>Resumen operativo</h1>
-                              <p>Periodo: <span class="badge">%s</span></p>
-                            </div>
-                            <table class="metrics">
-                              <tr>
-                                <th>Métrica</th>
-                                <th>Valor</th>
-                              </tr>
-                              <tr>
-                                <td>Usuarios nuevos</td>
-                                <td>%d</td>
-                              </tr>
-                              <tr>
-                                <td>Trueques completados</td>
-                                <td>%d</td>
-                              </tr>
-                              <tr>
-                                <td>Trueques cancelados</td>
-                                <td>%d</td>
-                              </tr>
-                              <tr>
-                                <td>Publicaciones creadas</td>
-                                <td>%d</td>
-                              </tr>
-                            </table>
-                          </body>
-                        </html>
-                        """,
-                monthLabel,
-                newUsers,
-                completedTrades,
-                cancelledTrades,
-                newItems);
-    }
-
-    private byte[] renderPdf(String html) {
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            PdfRendererBuilder builder = new PdfRendererBuilder();
-            builder.useFastMode();
-            builder.withHtmlContent(html, "");
-            builder.toStream(outputStream);
-            try {
-                builder.run();
-                outputStream.flush();
-            } catch (Exception exception) {
-                log.error("Error al renderizar el reporte PDF: {}", exception.getMessage());
-                throw new AdminReportException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "No se pudo generar el reporte en PDF. Inténtalo más tarde.",
-                        exception);
-            }
+            Document document = new Document();
+            PdfWriter.getInstance(document, outputStream);
+            document.open();
+
+            document.add(new Paragraph("Resumen operativo"));
+            document.add(new Paragraph("Periodo: " + monthLabel));
+            document.add(new Paragraph(" "));
+
+            PdfPTable table = new PdfPTable(2);
+            table.addCell("Métrica");
+            table.addCell("Valor");
+            table.addCell("Usuarios nuevos");
+            table.addCell(String.valueOf(newUsers));
+            table.addCell("Trueques completados");
+            table.addCell(String.valueOf(completedTrades));
+            table.addCell("Trueques cancelados");
+            table.addCell(String.valueOf(cancelledTrades));
+            table.addCell("Publicaciones creadas");
+            table.addCell(String.valueOf(newItems));
+            document.add(table);
+
+            document.close();
 
             byte[] pdfContent = outputStream.toByteArray();
             if (!isValidPdf(pdfContent)) {
@@ -146,8 +106,12 @@ public class AdminReportService {
             }
 
             return pdfContent;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (DocumentException | IOException exception) {
+            log.error("Error al renderizar el reporte PDF: {}", exception.getMessage());
+            throw new AdminReportException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "No se pudo generar el reporte en PDF. Inténtalo más tarde.",
+                    exception);
         }
     }
 
