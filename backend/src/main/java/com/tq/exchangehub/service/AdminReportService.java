@@ -13,6 +13,8 @@ import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -127,6 +129,7 @@ public class AdminReportService {
             builder.toStream(outputStream);
             try {
                 builder.run();
+                outputStream.flush();
             } catch (Exception exception) {
                 log.error("Error al renderizar el reporte PDF: {}", exception.getMessage());
                 throw new AdminReportException(
@@ -153,10 +156,21 @@ public class AdminReportService {
             return false;
         }
 
-        return content[0] == '%'
+        boolean hasPdfHeader = content[0] == '%'
                 && content[1] == 'P'
                 && content[2] == 'D'
                 && content[3] == 'F'
                 && content[4] == '-';
+
+        if (!hasPdfHeader) {
+            return false;
+        }
+
+        try (PDDocument document = Loader.loadPDF(content)) {
+            return document.getNumberOfPages() > 0;
+        } catch (IOException exception) {
+            log.error("El PDF generado no es válido: {}", exception.getMessage());
+            return false;
+        }
     }
 }
