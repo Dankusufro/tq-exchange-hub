@@ -62,4 +62,6 @@ public interface ItemRepository extends JpaRepository<Item, UUID> {
             @Param("moderationStatus") ModerationStatus moderationStatus,
             @Param("location") String location,
             @Param("createdAfter") OffsetDateTime createdAfter);
+
+    long countByCreatedAtBetween(OffsetDateTime startInclusive, OffsetDateTime endExclusive);
 }

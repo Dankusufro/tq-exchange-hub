@@ -48,6 +48,11 @@ public interface TradeRepository extends JpaRepository<Trade, UUID> {
             @Param("requesterId") UUID requesterId,
             @Param("statuses") Collection<TradeStatus> statuses);
 
+    long countByStatusAndUpdatedAtBetween(
+            @Param("status") TradeStatus status,
+            @Param("startInclusive") OffsetDateTime startInclusive,
+            @Param("endExclusive") OffsetDateTime endExclusive);
+
     @EntityGraph(
             attributePaths = {
                 "owner",
