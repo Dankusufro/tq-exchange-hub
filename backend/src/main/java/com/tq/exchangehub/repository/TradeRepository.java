@@ -48,6 +48,8 @@ public interface TradeRepository extends JpaRepository<Trade, UUID> {
             @Param("requesterId") UUID requesterId,
             @Param("statuses") Collection<TradeStatus> statuses);
 
+    boolean existsByOwnerItemIdOrRequesterItemId(UUID ownerItemId, UUID requesterItemId);
+
     long countByStatusAndUpdatedAtBetween(
             @Param("status") TradeStatus status,
             @Param("startInclusive") OffsetDateTime startInclusive,
