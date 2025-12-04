@@ -31,7 +31,8 @@ public class ProfileService {
                         .orElseThrow(() -> new IllegalArgumentException("Profile not found"));
 
         // Calcular totalTrades dinámicamente
-        long completedTrades = tradeRepository.countByOwnerOrRequesterAndStatus(profile, profile, TradeStatus.COMPLETED);
+        long completedTrades =
+                tradeRepository.countByParticipantAndStatus(profile, TradeStatus.COMPLETED);
 
         // Mapear a DTO y setear totalTrades
         ProfileDto dto = DtoMapper.toProfileDto(profile);

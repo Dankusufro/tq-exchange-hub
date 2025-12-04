@@ -228,7 +228,8 @@ public class TradeService {
     }
 
     private void recalculateTotalTrades(Profile profile) {
-        long completedTrades = tradeRepository.countByOwnerOrRequesterAndStatus(profile, profile, TradeStatus.COMPLETED);
+        long completedTrades =
+                tradeRepository.countByParticipantAndStatus(profile, TradeStatus.COMPLETED);
         profile.setTotalTrades((int) completedTrades);
         profileRepository.save(profile);
     }

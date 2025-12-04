@@ -15,7 +15,12 @@ import org.springframework.data.repository.query.Param;
 
 public interface TradeRepository extends JpaRepository<Trade, UUID> {
     List<Trade> findByStatus(TradeStatus status);
-    long countByOwnerOrRequesterAndStatus(Profile owner, Profile requester, TradeStatus status);
+    @Query(
+            "SELECT COUNT(t) FROM Trade t"
+                    + " WHERE (t.owner = :profile OR t.requester = :profile)"
+                    + " AND t.status = :status")
+    long countByParticipantAndStatus(
+            @Param("profile") Profile profile, @Param("status") TradeStatus status);
     long countByStatus(TradeStatus status);
 
     List<Trade> findByCreatedAtAfter(OffsetDateTime createdAt);
