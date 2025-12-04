@@ -24,7 +24,10 @@ import com.tq.exchangehub.util.PasswordStrengthValidator;
 import jakarta.transaction.Transactional;
 import java.time.Duration;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -51,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordStrengthValidator passwordStrengthValidator;
     private final long passwordResetTokenExpiration;
     private final boolean mailSenderConfigured;
+    private final Set<String> adminEmails;
 
     public AuthServiceImpl(
             UserAccountRepository userAccountRepository,
@@ -62,7 +66,8 @@ public class AuthServiceImpl implements AuthService {
             JavaMailSender mailSender,
             PasswordStrengthValidator passwordStrengthValidator,
             @Value("${application.security.password-reset-token-expiration:900000}")
-                    long passwordResetTokenExpiration) {
+                    long passwordResetTokenExpiration,
+            @Value("${application.admin.emails:${ADMIN_EMAILS:}}") String adminEmails) {
         this.userAccountRepository = userAccountRepository;
         this.profileRepository = profileRepository;
         this.passwordEncoder = passwordEncoder;
@@ -73,6 +78,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwordStrengthValidator = passwordStrengthValidator;
         this.passwordResetTokenExpiration = passwordResetTokenExpiration;
         this.mailSenderConfigured = isMailSenderConfigured(mailSender);
+        this.adminEmails = parseAdminEmails(adminEmails);
     }
 
     @Override
@@ -80,8 +86,10 @@ public class AuthServiceImpl implements AuthService {
     public AuthResponse register(RegisterRequest request) {
         passwordStrengthValidator.validate(request.getPassword());
 
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
         userAccountRepository
-                .findByEmailIgnoreCase(request.getEmail())
+                .findByEmailIgnoreCase(normalizedEmail)
                 .ifPresent(account -> {
                     throw new IllegalArgumentException("Email already registered");
                 });
@@ -95,11 +103,11 @@ public class AuthServiceImpl implements AuthService {
         Profile savedProfile = profileRepository.save(profile);
 
         UserAccount account = new UserAccount();
-        account.setEmail(request.getEmail().toLowerCase());
+        account.setEmail(normalizedEmail);
         account.setPassword(passwordEncoder.encode(request.getPassword()));
         account.setProfile(savedProfile);
         account.setCreatedAt(OffsetDateTime.now());
-        account.setRole(Role.USER);
+        account.setRole(adminEmails.contains(normalizedEmail) ? Role.ADMIN : Role.USER);
         userAccountRepository.save(account);
         savedProfile.setAccount(account);
         profileRepository.save(savedProfile);
@@ -253,5 +261,20 @@ public class AuthServiceImpl implements AuthService {
             return StringUtils.hasText(impl.getHost());
         }
         return true;
+    }
+
+    private Set<String> parseAdminEmails(String adminEmails) {
+        if (!StringUtils.hasText(adminEmails)) {
+            return Set.of();
+        }
+        return Arrays.stream(adminEmails.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .map(String::toLowerCase)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
     }
 }
