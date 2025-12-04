@@ -62,49 +62,55 @@ public class AdminReportService {
     private String buildHtml(YearMonth month, long newUsers, long completedTrades, long cancelledTrades, long newItems) {
         String monthLabel = month.format(DateTimeFormatter.ofPattern("MMMM yyyy").withLocale(new Locale("es")));
 
-        return """
-                <html>
-                  <head>
-                    <style>
-                      body { font-family: Arial, sans-serif; color: #1F2937; }
-                      h1 { color: #111827; }
-                      .header { margin-bottom: 12px; }
-                      .metrics { width: 100%; border-collapse: collapse; margin-top: 12px; }
-                      .metrics th { text-align: left; background: #F3F4F6; padding: 8px; }
-                      .metrics td { padding: 8px; border-bottom: 1px solid #E5E7EB; }
-                      .badge { background: #2563EB; color: white; padding: 4px 8px; border-radius: 6px; }
-                    </style>
-                  </head>
-                  <body>
-                    <div class="header">
-                      <h1>Resumen operativo</h1>
-                      <p>Periodo: <span class="badge">""" + monthLabel + """</span></p>
-                    </div>
-                    <table class="metrics">
-                      <tr>
-                        <th>Métrica</th>
-                        <th>Valor</th>
-                      </tr>
-                      <tr>
-                        <td>Usuarios nuevos</td>
-                        <td>""" + newUsers + """</td>
-                      </tr>
-                      <tr>
-                        <td>Trueques completados</td>
-                        <td>""" + completedTrades + """</td>
-                      </tr>
-                      <tr>
-                        <td>Trueques cancelados</td>
-                        <td>""" + cancelledTrades + """</td>
-                      </tr>
-                      <tr>
-                        <td>Publicaciones creadas</td>
-                        <td>""" + newItems + """</td>
-                      </tr>
-                    </table>
-                  </body>
-                </html>
-                """;
+        return String.format(
+                """
+                        <html>
+                          <head>
+                            <style>
+                              body { font-family: Arial, sans-serif; color: #1F2937; }
+                              h1 { color: #111827; }
+                              .header { margin-bottom: 12px; }
+                              .metrics { width: 100%; border-collapse: collapse; margin-top: 12px; }
+                              .metrics th { text-align: left; background: #F3F4F6; padding: 8px; }
+                              .metrics td { padding: 8px; border-bottom: 1px solid #E5E7EB; }
+                              .badge { background: #2563EB; color: white; padding: 4px 8px; border-radius: 6px; }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="header">
+                              <h1>Resumen operativo</h1>
+                              <p>Periodo: <span class="badge">%s</span></p>
+                            </div>
+                            <table class="metrics">
+                              <tr>
+                                <th>Métrica</th>
+                                <th>Valor</th>
+                              </tr>
+                              <tr>
+                                <td>Usuarios nuevos</td>
+                                <td>%d</td>
+                              </tr>
+                              <tr>
+                                <td>Trueques completados</td>
+                                <td>%d</td>
+                              </tr>
+                              <tr>
+                                <td>Trueques cancelados</td>
+                                <td>%d</td>
+                              </tr>
+                              <tr>
+                                <td>Publicaciones creadas</td>
+                                <td>%d</td>
+                              </tr>
+                            </table>
+                          </body>
+                        </html>
+                        """,
+                monthLabel,
+                newUsers,
+                completedTrades,
+                cancelledTrades,
+                newItems);
     }
 
     private byte[] renderPdf(String html) {
