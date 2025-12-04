@@ -11,7 +11,19 @@ import { apiClient } from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { es } from "date-fns/locale";
-import { AlertCircle, BarChart3, LayoutDashboard, Loader2, Shield, UserCog } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  LayoutDashboard,
+  Loader2,
+  RefreshCcw,
+  Shield,
+  UserCog,
+  XCircle,
+} from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -78,6 +90,19 @@ interface AbuseReport {
   status: AbuseReportStatus;
   createdAt: string;
   resolvedAt?: string;
+}
+
+interface HealthCheck {
+  name: string;
+  status: string;
+  details?: Record<string, unknown>;
+  components?: HealthCheck[];
+}
+
+interface AdminHealthSummary {
+  status: string;
+  checkedAt: string;
+  components: HealthCheck[];
 }
 
 const formatRelativeDate = (value: string) =>
@@ -168,6 +193,19 @@ const AdminDashboard = () => {
       ),
   });
 
+  const {
+    data: healthSummary,
+    isLoading: isLoadingHealth,
+    isError: isHealthError,
+    error: healthError,
+    refetch: refetchHealth,
+  } = useQuery<AdminHealthSummary>({
+    queryKey: ["admin", "health"],
+    queryFn: () => apiClient.get("/api/admin/health"),
+    refetchInterval: 30000,
+    refetchIntervalInBackground: true,
+  });
+
   const activitySeries = useMemo(() => {
     if (!metrics) return [];
 
@@ -223,6 +261,9 @@ const AdminDashboard = () => {
     return "default" as const;
   };
 
+  const getErrorMessage = (error: unknown, fallback: string) =>
+    error instanceof Error ? error.message : fallback;
+
   const handleDisableItem = useCallback(
     async (item: AdminItem) => {
       const confirmed = window.confirm(`¿Deshabilitar la publicación "${item.title}"?`);
@@ -232,10 +273,10 @@ const AdminDashboard = () => {
         await apiClient.patch(`/api/admin/items/${item.id}/disable`);
         toast({ title: "Publicación deshabilitada", description: "El ítem ya no estará disponible." });
         refetchItems();
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "No se pudo deshabilitar",
-          description: error?.message ?? "Intenta nuevamente más tarde.",
+          description: getErrorMessage(error, "Intenta nuevamente más tarde."),
           variant: "destructive",
         });
       }
@@ -254,10 +295,10 @@ const AdminDashboard = () => {
         await apiClient.delete(`/api/admin/items/${item.id}`);
         toast({ title: "Publicación eliminada", description: "El ítem fue eliminado del catálogo." });
         refetchItems();
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "No se pudo eliminar",
-          description: error?.message ?? "Revisa la conexión e inténtalo otra vez.",
+          description: getErrorMessage(error, "Revisa la conexión e inténtalo otra vez."),
           variant: "destructive",
         });
       }
@@ -271,10 +312,10 @@ const AdminDashboard = () => {
         await apiClient.patch(`/api/admin/reports/${report.id}/resolve`);
         toast({ title: "Reporte resuelto", description: "El caso se marcó como atendido." });
         refetchReports();
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "No se pudo resolver el reporte",
-          description: error?.message ?? "Intenta nuevamente.",
+          description: getErrorMessage(error, "Intenta nuevamente."),
           variant: "destructive",
         });
       }
@@ -296,10 +337,10 @@ const AdminDashboard = () => {
         refetchReports();
         refetchItems();
         refetchUsers();
-      } catch (error: any) {
+      } catch (error: unknown) {
         toast({
           title: "No se pudo aplicar la sanción",
-          description: error?.message ?? "Revisa la conexión e inténtalo de nuevo.",
+          description: getErrorMessage(error, "Revisa la conexión e inténtalo de nuevo."),
           variant: "destructive",
         });
       }
@@ -308,12 +349,18 @@ const AdminDashboard = () => {
   );
 
   useEffect(() => {
-    if (!isUsersError && !isItemsError && !isMetricsError && !isReportsError) {
+    if (
+      !isUsersError &&
+      !isItemsError &&
+      !isMetricsError &&
+      !isReportsError &&
+      !isHealthError
+    ) {
       return;
     }
 
     const description =
-      (usersError || itemsError || metricsError || reportsError)?.message ??
+      (usersError || itemsError || metricsError || reportsError || healthError)?.message ??
       "No pudimos cargar la consola de administración.";
     toast({
       title: "Error al cargar datos de administración",
@@ -322,9 +369,11 @@ const AdminDashboard = () => {
     });
   }, [
     isItemsError,
+    isHealthError,
     isMetricsError,
     isReportsError,
     isUsersError,
+    healthError,
     itemsError,
     metricsError,
     reportsError,
@@ -332,8 +381,76 @@ const AdminDashboard = () => {
     usersError,
   ]);
 
-  const isAnyLoading = isLoadingItems || isLoadingUsers || isLoadingMetrics || isLoadingReports;
+  const isAnyLoading =
+    isLoadingItems || isLoadingUsers || isLoadingMetrics || isLoadingReports || isLoadingHealth;
   const isTableLoading = isLoadingItems || isLoadingUsers;
+
+  const healthStatusStyles: Record<
+    string,
+    { icon: typeof AlertCircle; badgeClass: string; textClass: string }
+  > = {
+    UP: {
+      icon: CheckCircle2,
+      badgeClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
+      textClass: "text-emerald-700",
+    },
+    DOWN: {
+      icon: XCircle,
+      badgeClass: "border-destructive/40 bg-destructive/10 text-destructive",
+      textClass: "text-destructive",
+    },
+    OUT_OF_SERVICE: {
+      icon: AlertTriangle,
+      badgeClass: "border-amber-200 bg-amber-50 text-amber-800",
+      textClass: "text-amber-800",
+    },
+  };
+
+  const getHealthDetail = (details?: Record<string, unknown>) => {
+    if (!details) return "Sin detalles adicionales";
+
+    const message = details.message || details.error || details.status;
+    if (typeof message === "string") {
+      return message;
+    }
+
+    const firstEntry = Object.entries(details)[0];
+    if (firstEntry) {
+      return `${firstEntry[0]}: ${String(firstEntry[1])}`;
+    }
+
+    return "Sin detalles adicionales";
+  };
+
+  const renderHealthChecks = (checks: HealthCheck[], path: string[] = []) =>
+    checks.map((check, index) => {
+      const key = [...path, `${check.name}-${index}`].join("/");
+      const theme = healthStatusStyles[check.status] ?? healthStatusStyles.OUT_OF_SERVICE;
+      const Icon = theme.icon;
+
+      return (
+        <div key={key} className="space-y-2">
+          <div className="flex items-start gap-3 rounded-lg border bg-background p-3 shadow-sm">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/60">
+              <Icon className={`h-5 w-5 ${theme.textClass}`} />
+            </div>
+            <div className="flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-foreground">{check.name}</p>
+                <Badge className={theme.badgeClass}>{check.status}</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">{getHealthDetail(check.details)}</p>
+            </div>
+          </div>
+
+          {check.components?.length ? (
+            <div className="space-y-2 border-l border-muted-foreground/20 pl-6">
+              {renderHealthChecks(check.components, [...path, check.name])}
+            </div>
+          ) : null}
+        </div>
+      );
+    });
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -376,6 +493,68 @@ const AdminDashboard = () => {
               );
             })}
           </div>
+
+          <Card className="shadow-sm">
+            <CardHeader className="space-y-2">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div className="space-y-1">
+                  <CardTitle>Salud de servicios</CardTitle>
+                  <CardDescription>
+                    Consolidado de checks de base de datos, mensajería y dependencias externas.
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Clock3 className="h-4 w-4" />
+                    {healthSummary ? formatRelativeDate(healthSummary.checkedAt) : "Sincronizando..."}
+                  </Badge>
+                  <Button variant="outline" size="sm" onClick={() => refetchHealth()} disabled={isLoadingHealth}>
+                    {isLoadingHealth ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <RefreshCcw className="h-4 w-4" />
+                        <span>Refrescar</span>
+                      </div>
+                    )}
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>Actualización automática cada 30 segundos.</span>
+                {healthSummary ? (
+                  <Badge className={(healthStatusStyles[healthSummary.status] ?? healthStatusStyles.OUT_OF_SERVICE).badgeClass}>
+                    Estado {healthSummary.status}
+                  </Badge>
+                ) : null}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingHealth && !healthSummary ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-6 text-muted-foreground">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <p>Consultando salud de los servicios...</p>
+                </div>
+              ) : null}
+
+              {isHealthError ? (
+                <div className="flex items-center gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  <div className="text-sm flex-1">
+                    <p className="font-medium">No se pudo obtener la salud de los servicios</p>
+                    <p className="text-destructive/80">{healthError?.message ?? "Intenta refrescar más tarde."}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => refetchHealth()}>
+                    Reintentar
+                  </Button>
+                </div>
+              ) : null}
+
+              {!isLoadingHealth && !isHealthError && healthSummary ? (
+                <div className="space-y-3">{renderHealthChecks(healthSummary.components)}</div>
+              ) : null}
+            </CardContent>
+          </Card>
 
           <div className="grid gap-6 lg:grid-cols-7">
             <Card className="shadow-sm lg:col-span-4">
