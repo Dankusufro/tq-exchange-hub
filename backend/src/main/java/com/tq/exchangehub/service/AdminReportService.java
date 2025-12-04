@@ -76,27 +76,31 @@ public class AdminReportService {
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             Document document = new Document();
-            PdfWriter.getInstance(document, outputStream);
-            document.open();
+            try {
+                PdfWriter.getInstance(document, outputStream);
+                document.open();
 
-            document.add(new Paragraph("Resumen operativo"));
-            document.add(new Paragraph("Periodo: " + monthLabel));
-            document.add(new Paragraph(" "));
+                document.add(new Paragraph("Resumen operativo"));
+                document.add(new Paragraph("Periodo: " + monthLabel));
+                document.add(new Paragraph(" "));
 
-            PdfPTable table = new PdfPTable(2);
-            table.addCell("Métrica");
-            table.addCell("Valor");
-            table.addCell("Usuarios nuevos");
-            table.addCell(String.valueOf(newUsers));
-            table.addCell("Trueques completados");
-            table.addCell(String.valueOf(completedTrades));
-            table.addCell("Trueques cancelados");
-            table.addCell(String.valueOf(cancelledTrades));
-            table.addCell("Publicaciones creadas");
-            table.addCell(String.valueOf(newItems));
-            document.add(table);
-
-            document.close();
+                PdfPTable table = new PdfPTable(2);
+                table.addCell("Métrica");
+                table.addCell("Valor");
+                table.addCell("Usuarios nuevos");
+                table.addCell(String.valueOf(newUsers));
+                table.addCell("Trueques completados");
+                table.addCell(String.valueOf(completedTrades));
+                table.addCell("Trueques cancelados");
+                table.addCell(String.valueOf(cancelledTrades));
+                table.addCell("Publicaciones creadas");
+                table.addCell(String.valueOf(newItems));
+                document.add(table);
+            } finally {
+                if (document.isOpen()) {
+                    document.close();
+                }
+            }
 
             byte[] pdfContent = outputStream.toByteArray();
             if (!isValidPdf(pdfContent)) {
