@@ -17,7 +17,6 @@ import com.lowagie.text.DocumentException;
 import com.lowagie.text.Paragraph;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
-import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -134,7 +133,7 @@ public class AdminReportService {
             return false;
         }
 
-        try (PDDocument document = Loader.loadPDF(content)) {
+        try (PDDocument document = PDDocument.load(content)) {
             return document.getNumberOfPages() > 0;
         } catch (IOException exception) {
             log.error("El PDF generado no es válido: {}", exception.getMessage());
