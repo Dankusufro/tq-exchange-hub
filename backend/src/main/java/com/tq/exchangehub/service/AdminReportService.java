@@ -7,6 +7,7 @@ import com.tq.exchangehub.repository.TradeRepository;
 import com.tq.exchangehub.repository.UserAccountRepository;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -123,20 +124,38 @@ public class AdminReportService {
             return false;
         }
 
-        boolean hasPdfHeader = content[0] == '%'
-                && content[1] == 'P'
-                && content[2] == 'D'
-                && content[3] == 'F'
-                && content[4] == '-';
+        byte[] signature = "%PDF-".getBytes(StandardCharsets.US_ASCII);
+        int scanLength = Math.min(content.length, 1024);
+        boolean hasPdfHeader = false;
+        for (int i = 0; i <= scanLength - signature.length; i++) {
+            boolean match = true;
+            for (int j = 0; j < signature.length; j++) {
+                if (content[i + j] != signature[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                hasPdfHeader = true;
+                break;
+            }
+        }
 
         if (!hasPdfHeader) {
+            log.info(
+                    "No se encontró el encabezado %PDF- en los primeros {} bytes (tamaño total: {} bytes)",
+                    scanLength,
+                    content.length);
             return false;
         }
 
         try (PDDocument document = PDDocument.load(content)) {
             return document.getNumberOfPages() > 0;
         } catch (IOException exception) {
-            log.error("El PDF generado no es válido: {}", exception.getMessage());
+            log.info(
+                    "El PDF generado no es válido ({} bytes): {}",
+                    content.length,
+                    exception.getMessage());
             return false;
         }
     }
