@@ -249,10 +249,10 @@ const AdminDashboard = () => {
     error: reportsError,
     refetch: refetchReports,
   } = useQuery<AbuseReport[]>({
-    queryKey: ["admin", "reports", reportStatusFilter],
+    queryKey: ["admin", "abuse-reports", reportStatusFilter],
     queryFn: () =>
       apiClient.get(
-        `/api/admin/reports${reportStatusFilter === "ALL" ? "" : `?status=${reportStatusFilter}`}`,
+        `/api/admin/abuse-reports${reportStatusFilter === "ALL" ? "" : `?status=${reportStatusFilter}`}`,
       ),
   });
 
@@ -471,7 +471,7 @@ const AdminDashboard = () => {
   const handleResolveReport = useCallback(
     async (report: AbuseReport) => {
       try {
-        await apiClient.patch(`/api/admin/reports/${report.id}/resolve`);
+        await apiClient.patch(`/api/admin/abuse-reports/${report.id}/resolve`);
         toast({ title: "Reporte resuelto", description: "El caso se marcó como atendido." });
         refetchReports();
       } catch (error: unknown) {
@@ -494,7 +494,7 @@ const AdminDashboard = () => {
       if (!confirmed) return;
 
       try {
-        await apiClient.patch(`/api/admin/reports/${report.id}/sanction`, { action });
+        await apiClient.patch(`/api/admin/abuse-reports/${report.id}/sanction`, { action });
         toast({ title: "Sanción aplicada", description: "El reporte fue actualizado." });
         refetchReports();
         refetchItems();
