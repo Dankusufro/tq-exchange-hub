@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin Reports")
+@Tag(name = "Admin Abuse Reports")
 @RestController
-@RequestMapping("/api/admin/reports")
+@RequestMapping("/api/admin/abuse-reports")
 @PreAuthorize("hasRole('ADMIN')")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminAbuseReportController {
